@@ -1,0 +1,68 @@
+REPORTE DEL DATAFRAME
+============================================================
+Filas: 1296675
+Columnas: 24
+Duplicados: 0
+
+Columnas y tipos:
+- Unnamed: 0: int64
+- trans_date_trans_time: object
+- cc_num: int64
+- merchant: object
+- category: object
+- amt: float64
+- first: object
+- last: object
+- gender: object
+- street: object
+- city: object
+- state: object
+- zip: int64
+- lat: float64
+- long: float64
+- city_pop: int64
+- job: object
+- dob: object
+- trans_num: object
+- unix_time: int64
+- merch_lat: float64
+- merch_long: float64
+- is_fraud: int64
+- merch_zipcode: float64
+
+Valores nulos por columna:
+- Unnamed: 0: 0
+- trans_date_trans_time: 0
+- cc_num: 0
+- merchant: 0
+- category: 0
+- amt: 0
+- first: 0
+- last: 0
+- gender: 0
+- street: 0
+- city: 0
+- state: 0
+- zip: 0
+- lat: 0
+- long: 0
+- city_pop: 0
+- job: 0
+- dob: 0
+- trans_num: 0
+- unix_time: 0
+- merch_lat: 0
+- merch_long: 0
+- is_fraud: 0
+- merch_zipcode: 195973
+
+Estadísticas numéricas:
+        Unnamed: 0        cc_num          amt          zip          lat         long     city_pop     unix_time    merch_lat   merch_long     is_fraud  merch_zipcode
+count  1296675.000  1.296675e+06  1296675.000  1296675.000  1296675.000  1296675.000  1296675.000  1.296675e+06  1296675.000  1296675.000  1296675.000    1100702.000
+mean    648337.000  4.171920e+17       70.351    48800.671       38.538      -90.226    88824.441  1.349244e+09       38.537      -90.226        0.006      46825.754
+std     374317.974  1.308806e+18      160.316    26893.222        5.076       13.759   301956.361  1.284128e+07        5.110       13.771        0.076      25834.001
+min          0.000  6.041621e+10        1.000     1257.000       20.027     -165.672       23.000  1.325376e+09       19.028     -166.671        0.000       1001.000
+25%     324168.500  1.800429e+14        9.650    26237.000       34.620      -96.798      743.000  1.338751e+09       34.734      -96.897        0.000      25114.000
+50%     648337.000  3.521417e+15       47.520    48174.000       39.354      -87.477     2456.000  1.349250e+09       39.366      -87.438        0.000      45860.000
+75%     972505.500  4.642255e+15       83.140    72042.000       41.940      -80.158    20328.000  1.359385e+09       41.957      -80.237        0.000      68319.000
+max    1296674.000  4.992346e+18    28948.900    99783.000       66.693      -67.950  2906700.000  1.371817e+09       67.510      -66.951        1.000      99403.000
