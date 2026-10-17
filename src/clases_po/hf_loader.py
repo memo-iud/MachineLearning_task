@@ -69,6 +69,7 @@ class HFDatasetLoader:
             dataset = dataset.select(range(min(self.max_rows, len(dataset))))
 
         self.df = dataset.to_pandas()
+        self.df=self.df *100
         if self.filename is not None:
             self._save(self.df)
         return self.df
