@@ -1,68 +1,68 @@
 REPORTE DEL DATAFRAME
 ============================================================
-Filas: 1296675
+Filas: 100
 Columnas: 24
 Duplicados: 0
 
 Columnas y tipos:
-- Unnamed: 0: int64
-- trans_date_trans_time: object
-- cc_num: int64
-- merchant: object
-- category: object
-- amt: float64
-- first: object
-- last: object
-- gender: object
-- street: object
-- city: object
-- state: object
-- zip: int64
-- lat: float64
-- long: float64
-- city_pop: int64
-- job: object
-- dob: object
-- trans_num: object
-- unix_time: int64
-- merch_lat: float64
-- merch_long: float64
-- is_fraud: int64
-- merch_zipcode: float64
+- fecha_hora_transaccion: object
+- num_tarjeta: int64
+- establecimiento: object
+- categoria: object
+- monto: float64
+- nombre: object
+- apellido: object
+- genero: object
+- calle: object
+- ciudad: object
+- estado: object
+- codigo_postal: int64
+- latitud: float64
+- longitud: float64
+- poblacion_ciudad: int64
+- trabajo: object
+- fecha_nacimiento: object
+- num_transaccion: object
+- tiempo_unix: int64
+- latitud_comerciante: float64
+- longitud_comerciante: float64
+- es_fraude: int64
+- codigo_postal_comerciante: float64
+- edad: int64
 
 Valores nulos por columna:
-- Unnamed: 0: 0
-- trans_date_trans_time: 0
-- cc_num: 0
-- merchant: 0
-- category: 0
-- amt: 0
-- first: 0
-- last: 0
-- gender: 0
-- street: 0
-- city: 0
-- state: 0
-- zip: 0
-- lat: 0
-- long: 0
-- city_pop: 0
-- job: 0
-- dob: 0
-- trans_num: 0
-- unix_time: 0
-- merch_lat: 0
-- merch_long: 0
-- is_fraud: 0
-- merch_zipcode: 195973
+- fecha_hora_transaccion: 0
+- num_tarjeta: 0
+- establecimiento: 0
+- categoria: 0
+- monto: 0
+- nombre: 0
+- apellido: 0
+- genero: 0
+- calle: 0
+- ciudad: 0
+- estado: 0
+- codigo_postal: 0
+- latitud: 0
+- longitud: 0
+- poblacion_ciudad: 0
+- trabajo: 0
+- fecha_nacimiento: 0
+- num_transaccion: 0
+- tiempo_unix: 0
+- latitud_comerciante: 0
+- longitud_comerciante: 0
+- es_fraude: 0
+- codigo_postal_comerciante: 0
+- edad: 0
 
 Estadísticas numéricas:
-        Unnamed: 0        cc_num          amt          zip          lat         long     city_pop     unix_time    merch_lat   merch_long     is_fraud  merch_zipcode
-count  1296675.000  1.296675e+06  1296675.000  1296675.000  1296675.000  1296675.000  1296675.000  1.296675e+06  1296675.000  1296675.000  1296675.000    1100702.000
-mean    648337.000  4.171920e+17       70.351    48800.671       38.538      -90.226    88824.441  1.349244e+09       38.537      -90.226        0.006      46825.754
-std     374317.974  1.308806e+18      160.316    26893.222        5.076       13.759   301956.361  1.284128e+07        5.110       13.771        0.076      25834.001
-min          0.000  6.041621e+10        1.000     1257.000       20.027     -165.672       23.000  1.325376e+09       19.028     -166.671        0.000       1001.000
-25%     324168.500  1.800429e+14        9.650    26237.000       34.620      -96.798      743.000  1.338751e+09       34.734      -96.897        0.000      25114.000
-50%     648337.000  3.521417e+15       47.520    48174.000       39.354      -87.477     2456.000  1.349250e+09       39.366      -87.438        0.000      45860.000
-75%     972505.500  4.642255e+15       83.140    72042.000       41.940      -80.158    20328.000  1.359385e+09       41.957      -80.237        0.000      68319.000
-max    1296674.000  4.992346e+18    28948.900    99783.000       66.693      -67.950  2906700.000  1.371817e+09       67.510      -66.951        1.000      99403.000
+        num_tarjeta    monto  codigo_postal  latitud  longitud  poblacion_ciudad   tiempo_unix  latitud_comerciante  longitud_comerciante  es_fraude  codigo_postal_comerciante     edad
+count  1.000000e+02  100.000        100.000  100.000   100.000           100.000  1.000000e+02              100.000               100.000      100.0                    100.000  100.000
+mean   4.091835e+17   81.771      48708.810   38.836   -91.318         58002.140  1.325378e+09               38.850               -91.414        0.0                  33138.860   48.470
+std    1.301924e+18   74.416      27989.617    5.082    15.421        179677.455  1.325509e+03                5.143                15.389        0.0                  28983.879   17.052
+min    6.049559e+10    1.820       1545.000   20.083  -155.488            46.000  1.325376e+09               19.560              -156.046        0.0                     -1.000   19.000
+25%    2.048580e+14   43.895      23601.000   36.308   -99.112           595.000  1.325377e+09               36.362               -99.082        0.0                   3918.500   35.000
+50%    3.506574e+15   62.805      48893.500   39.590   -87.414          2265.000  1.325378e+09               39.508               -88.315        0.0                  25643.500   47.000
+75%    4.689607e+15   96.968      72076.500   42.178   -79.754         19211.750  1.325379e+09               41.941               -79.435        0.0                  57182.750   58.000
+max    4.956829e+18  341.670      99160.000   48.888   -69.966       1263321.000  1.325381e+09               49.159               -70.449        0.0                  98262.000   93.000

@@ -1,6 +1,14 @@
 # MachineLearning_task
 
-Obtener y preparar datos desde Hugging Face
+Integrantes del proyecto
+
+Jaider Morales Bautista
+
+Aleicer Vesga Rueda
+
+Guillerno Leon Loaiza Mesa
+
+##Obtener y preparar datos desde Hugging Face
 
 creo repositorio en github, activo el readme, gitignore > python, 
 
