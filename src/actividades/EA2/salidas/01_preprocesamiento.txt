@@ -1,0 +1,95 @@
+EA2 - COMPONENTE 1: PREPROCESAMIENTO
+======================================================================
+
+ANTES Y DESPUÉS
+                    antes  despues
+filas             1296675   300000
+columnas               24       11
+valores nulos      195973        0
+filas duplicadas        0        0
+
+Tipos antes:
+- Unnamed: 0: int64
+- trans_date_trans_time: object
+- cc_num: int64
+- merchant: object
+- category: object
+- amt: float64
+- first: object
+- last: object
+- gender: object
+- street: object
+- city: object
+- state: object
+- zip: int64
+- lat: float64
+- long: float64
+- city_pop: int64
+- job: object
+- dob: object
+- trans_num: object
+- unix_time: int64
+- merch_lat: float64
+- merch_long: float64
+- is_fraud: int64
+- merch_zipcode: float64
+
+Tipos después:
+- categoria: object
+- monto: float64
+- genero: object
+- estado: object
+- es_fraude: int64
+- hora: int32
+- dia_semana: object
+- edad: int64
+- distancia_km: float64
+- log_poblacion: float64
+- log_monto: float64
+
+OPERACIONES APLICADAS (en orden)
+1. Muestreo estratificado
+   Motivo: El dataset completo es muy grande para ejecutarlo en cada push; la estratificación conserva la misma proporción de fraudes.
+   Efecto: 1,296,675 -> 300,000 filas; fraude 0.579 % -> 0.579 % (semilla 42).
+2. Selección de variables (eliminar columnas)
+   Motivo: Se quitan datos personales, identificadores, columnas repetidas y columnas con demasiadas categorías: merchant (693 valores distintos), city (890 valores distintos), job (492 valores distintos), zip (964 valores distintos).
+   Efecto: 12 columnas eliminadas (Unnamed: 0, cc_num, first, last, street, trans_num, unix_time, zip, merchant, city, job, merch_zipcode); con ellas se van 45,462 valores nulos.
+3. Renombrar columnas al español
+   Motivo: Mantener el mismo idioma que en la EA1 y que el reporte sea fácil de leer.
+   Efecto: 12 columnas renombradas.
+4. Eliminar duplicados
+   Motivo: Una fila repetida pesaría doble al entrenar y podría quedar a la vez en entrenamiento y en prueba.
+   Efecto: 0 filas duplicadas eliminadas.
+5. Corrección de tipos
+   Motivo: Las fechas llegan como texto; hay que convertirlas a fecha para poder calcular con ellas.
+   Efecto: 'fecha_hora_transaccion' y 'fecha_nacimiento' pasan de texto a datetime.
+6. Enriquecimiento (variables nuevas)
+   Motivo: La hora y el día pueden mostrar patrones de compra y de fraude; la edad exacta mejora el cálculo por año de la EA1; la distancia resume cuatro coordenadas en una medida con sentido; el logaritmo reduce el sesgo de la población y del monto, que tienen unos pocos valores muy grandes.
+   Efecto: Nuevas: hora, dia_semana, edad, distancia_km, log_poblacion, log_monto.
+7. Quitar columnas ya transformadas
+   Motivo: Sus versiones derivadas contienen la información útil; dejarlas repetiría datos.
+   Efecto: 7 columnas eliminadas (fecha_hora_transaccion, fecha_nacimiento, latitud, longitud, latitud_comerciante, longitud_comerciante, poblacion_ciudad).
+8. Separación entrenamiento / prueba
+   Motivo: Evaluar con datos que el modelo no vio; se estratifica para que ambos conjuntos tengan la misma proporción de fraudes. Los dos modelos usan esta misma división.
+   Efecto: entrenamiento=240,000 filas (fraude 0.579 %); prueba=60,000 filas (fraude 0.578 %).
+
+Transformador (ajustado solo con entrenamiento):
+- StandardScaler sobre: edad, distancia_km, log_poblacion, log_monto
+- OneHotEncoder(drop='first', handle_unknown='ignore') sobre: categoria, genero, estado, hora, dia_semana
+- Columnas creadas por variable categórica: {'categoria': 13, 'genero': 1, 'estado': 50, 'hora': 23, 'dia_semana': 6}
+- Matriz final: entrenamiento (240000, 97), prueba (60000, 97)
+
+Numéricas escaladas (entrenamiento ~ media 0 y desv. 1; prueba solo se aproxima):
+               media_train  desv_train  media_test  desv_test
+edad                   0.0         1.0     -0.0020     1.0019
+distancia_km           0.0         1.0     -0.0027     1.0000
+log_poblacion          0.0         1.0     -0.0034     0.9980
+log_monto              0.0         1.0      0.0049     0.9990
+
+Muestra después del preprocesamiento (5 filas):
+        categoria   monto genero estado  es_fraude  hora dia_semana  edad  distancia_km  log_poblacion  log_monto
+0     grocery_pos   29.09      M     WY          0     7  miercoles    25     69.345764       9.873492   3.404193
+1     grocery_pos  110.49      F     NE          0     7    viernes    38     29.025236       6.234411   4.713935
+2     food_dining   30.64      F     NY          0    19    domingo    19     75.042089      14.733680   3.454422
+3   gas_transport   42.06      F     MO          0     3      lunes    29    100.341906       7.770223   3.762594
+4  health_fitness   40.44      F     AZ          0    17     jueves    31     41.475902       7.963112   3.724247
