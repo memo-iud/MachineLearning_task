@@ -1,0 +1,146 @@
+EA2 - COMPONENTE 3: CLASIFICACIÓN DE FRAUDE
+======================================================================
+
+QUÉ SE CLASIFICA
+Cada transacción en una de dos clases: 0 = legítima, 1 = fraude (columna 'es_fraude', viene en el dataset; no se construyó a partir de otra variable).
+
+Distribución de clases:
+           entrenamiento  prueba  % prueba
+es_fraude                                 
+legitima          238610   59653    99.422
+fraude              1390     347     0.578
+
+CONFIGURACIÓN
+- Predictoras numéricas: edad, distancia_km, log_poblacion, log_monto
+- Predictoras categóricas: categoria, genero, estado, hora, dia_semana
+- Excluida: 'es_fraude' (es la respuesta). 'monto' entra como log_monto.
+- Algoritmo: sklearn.linear_model.LogisticRegression con class_weight='balanced', max_iter=1000, random_state=42; el resto por defecto (penalty='l2', C=1.0, solver='lbfgs').
+- Por qué este algoritmo: es interpretable (cada coeficiente sube o baja el riesgo), entrega probabilidades y, con class_weight='balanced', compensa que haya tan pocos fraudes.
+- Preparación dentro del Pipeline: StandardScaler + OneHotEncoder, ajustados solo con entrenamiento (misma división 80/20 estratificada, semilla 42).
+- Umbral de decisión: 0.5 (si la probabilidad de fraude es >= 0.5, se predice fraude).
+- Línea base: DummyClassifier(strategy='most_frequent'), siempre dice 'legítima'.
+
+MÉTRICAS ELEGIDAS Y POR QUÉ
+- La exactitud engaña: con ~0,6 % de fraudes, decir siempre 'legítima' acierta ~99,4 %.
+- Recall de fraude: de todos los fraudes reales, cuántos detecta. Es la más importante, porque un fraude perdido es plata perdida.
+- Precisión de fraude: de todas las alertas, cuántas son fraude de verdad. Mide el costo de las falsas alarmas (clientes molestos, revisiones manuales).
+- F1: equilibrio entre precisión y recall.
+- PR-AUC: qué tan bien ordena las transacciones por riesgo, sin depender del umbral. Un modelo al azar obtiene el % de fraudes.
+
+EVALUACIÓN EN PRUEBA
+                  modelo  linea_base
+exactitud         0.8441      0.9942
+precision fraude  0.0297      0.0000
+recall fraude     0.8184      0.0000
+f1 fraude         0.0572      0.0000
+f1 macro          0.4861      0.4985
+PR-AUC            0.3075      0.0058
+ROC-AUC           0.9191      0.5000
+
+Matriz de confusión del modelo:
+               pred legitima  pred fraude
+real legitima          50362         9291
+real fraude               63          284
+
+Métricas por clase del modelo:
+          precision  recall      f1  casos
+legitima     0.9988  0.8442  0.9150  59653
+fraude       0.0297  0.8184  0.0572    347
+
+Matriz de confusión de la línea base:
+               pred legitima  pred fraude
+real legitima          59653            0
+real fraude              347            0
+
+EFECTO DEL UMBRAL (análisis en prueba; el modelo usa el umbral indicado arriba)
+ umbral  precision_fraude  recall_fraude  f1_fraude  fraudes_detectados  fraudes_perdidos  falsas_alarmas
+   0.50            0.0297         0.8184     0.0572                 284                63            9291
+   0.70            0.0403         0.6945     0.0761                 241               106            5746
+   0.90            0.2625         0.4841     0.3404                 168               179             472
+   0.95            0.4640         0.3718     0.4128                 129               218             149
+   0.99            0.7105         0.0778     0.1403                  27               320              11
+
+IMPORTANCIA DE CADA VARIABLE (por permutación, en prueba)
+Cuánto baja el PR-AUC si se mezclan al azar los valores de esa variable (3 repeticiones, semilla 42):
+hora             0.2836
+log_monto        0.2757
+categoria        0.1277
+dia_semana       0.0178
+edad             0.0171
+estado           0.0068
+log_poblacion    0.0008
+genero           0.0000
+distancia_km    -0.0001
+
+COEFICIENTES
+razon_probabilidades = exp(coeficiente). Mayor que 1 sube el riesgo de fraude; menor que 1 lo baja. Las numéricas están escaladas (efecto de +1 desviación).
+
+Las 10 que más suben el riesgo:
+                              caracteristica  coeficiente  razon_probabilidades
+categoria = gas_transport (vs entertainment)       3.1892               24.2687
+  categoria = grocery_net (vs entertainment)       2.9133               18.4182
+  categoria = grocery_pos (vs entertainment)       2.5115               12.3240
+       categoria = travel (vs entertainment)       2.4598               11.7028
+     categoria = misc_net (vs entertainment)       2.1220                8.3482
+                            hora = 23 (vs 0)       1.9453                6.9959
+     categoria = misc_pos (vs entertainment)       1.8055                6.0829
+                            hora = 22 (vs 0)       1.7866                5.9691
+ categoria = shopping_net (vs entertainment)       1.7683                5.8610
+categoria = personal_care (vs entertainment)       1.2882                3.6262
+
+Las 10 que más bajan el riesgo:
+     caracteristica  coeficiente  razon_probabilidades
+   hora = 10 (vs 0)      -2.8176                0.0597
+    hora = 9 (vs 0)      -2.7999                0.0608
+    hora = 4 (vs 0)      -2.7278                0.0654
+   hora = 11 (vs 0)      -2.7047                0.0669
+    hora = 7 (vs 0)      -2.6008                0.0742
+    hora = 8 (vs 0)      -2.5813                0.0757
+    hora = 6 (vs 0)      -2.5649                0.0769
+    hora = 5 (vs 0)      -2.5054                0.0816
+estado = ID (vs AK)      -2.1179                0.1203
+   hora = 12 (vs 0)      -1.8814                0.1524
+
+Intercepto: -2.3499
+
+ANÁLISIS DE ERRORES
+                   casos  monto_mediano
+tipo                                   
+fraude detectado     284         761.21
+fraude perdido        63          19.02
+falsa alarma        9291          76.20
+legitima correcta  50362          39.41
+
+Fraudes detectados por categoría de comercio:
+                fraudes  detectados  recall
+categoria                                  
+shopping_net         91          89   0.978
+grocery_pos          77          68   0.883
+shopping_pos         43          40   0.930
+gas_transport        35          16   0.457
+misc_net             30          30   1.000
+personal_care        12           8   0.667
+kids_pets            10           5   0.500
+misc_pos             10           4   0.400
+food_dining          10           7   0.700
+entertainment         9           7   0.778
+home                  7           6   0.857
+grocery_net           6           1   0.167
+health_fitness        5           1   0.200
+travel                2           2   1.000
+
+INTERPRETACIÓN (calculada con esta ejecución)
+- La línea base acierta el 99.42 % sin detectar ni un fraude (recall de fraude = 0.00). Por eso la exactitud no sirve para juzgar este problema.
+- Con umbral 0.5, el modelo detecta 284 de 347 fraudes (recall 81.8 %). A cambio genera 9,291 falsas alarmas: de cada 100 alertas, 3.0 son fraude de verdad.
+- Reconoce mejor la clase 'legitima' (F1 0.915) que la clase 'fraude' (F1 0.057). Su error más frecuente son las falsas alarmas (9,291) más que los fraudes perdidos (63).
+- PR-AUC = 0.308 frente a 0.0058 de un modelo al azar: ordena las transacciones por riesgo 53 veces mejor que el azar.
+- La variable más importante para detectar fraude es 'hora' (si se mezcla, el PR-AUC baja 0.284), seguida de 'log_monto' (0.276) y 'categoria' (0.128).
+- La característica que más sube el riesgo es categoria = gas_transport (vs entertainment) (multiplica las probabilidades por 24.27).
+- Los fraudes que se le escapan tienen un monto mediano de $19.02, frente a $761.21 de los que sí detecta: los fraudes pequeños se parecen más a compras normales.
+- Por categoría, detecta mejor el fraude en 'misc_net' (100 %) y peor en 'grocery_net' (17 %).
+
+LIMITACIONES
+- class_weight='balanced' sube mucho el recall pero produce muchas falsas alarmas; en la práctica habría que escoger el umbral según el costo de cada error.
+- El modelo es lineal: no capta combinaciones como 'compra grande Y de madrugada' salvo como suma de efectos por separado.
+- No usa el historial del cliente (por ejemplo, si gasta mucho más de lo normal), que suele ser la señal más fuerte de fraude.
+- El dataset es simulado; los patrones pueden ser más limpios que en la vida real.
