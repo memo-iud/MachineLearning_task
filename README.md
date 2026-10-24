@@ -65,9 +65,9 @@ Transformaciones aplicadas: renombrar las columnas al español, eliminar el índ
 
 ## Actividad 2 — Modelos de predicción y clasificación
 
-> En construcción: componentes 0, 1 y 2 listos; faltan la clasificación (3) y el resumen final (4).
+> En construcción: componentes 0 a 3 listos; falta el resumen final (4).
 
-- Código: [`src/actividades/EA2/main.py`](src/actividades/EA2/main.py) (orquesta el flujo), [`src/clases_po/preprocesador.py`](src/clases_po/preprocesador.py) y [`src/clases_po/regresion_monto.py`](src/clases_po/regresion_monto.py).
+- Código: [`src/actividades/EA2/main.py`](src/actividades/EA2/main.py) (orquesta el flujo), [`src/clases_po/preprocesador.py`](src/clases_po/preprocesador.py), [`src/clases_po/regresion_monto.py`](src/clases_po/regresion_monto.py) y [`src/clases_po/clasificacion_fraude.py`](src/clases_po/clasificacion_fraude.py).
 - Salidas: `src/actividades/EA2/salidas/`.
 - Workflow: [`.github/workflows/ea2.yml`](.github/workflows/ea2.yml).
 
@@ -76,6 +76,7 @@ Transformaciones aplicadas: renombrar las columnas al español, eliminar el índ
 | 0. DataFrame construido desde Hugging Face | `salidas/00_dataframe_inicial.txt` |
 | 1. Preprocesamiento (antes, operaciones, después) | `salidas/01_preprocesamiento.txt` |
 | 2. Regresión lineal (configuración, métricas, coeficientes, interpretación) | `salidas/02_regresion.txt` |
+| 3. Clasificación (configuración, matriz de confusión, métricas, umbrales, errores) | `salidas/03_clasificacion.txt` |
 
 ### 0. Construcción del DataFrame
 
@@ -133,6 +134,47 @@ También vale la pena aclarar que el R² en dólares puede salir negativo aunque
 Validamos el código con datos simulados en los que pusimos efectos conocidos (+200 % y −50 %), y el modelo los recuperó casi exactos (+200,6 % y −49,5 %).
 
 Los resultados y la interpretación de cada ejecución se calculan solos y quedan en `02_regresion.txt`. **Limitaciones:** el dataset no dice qué se compró, que es lo que más define el monto. Además, el modelo lineal solo suma efectos y no capta combinaciones, y con el logaritmo tiende a quedarse corto en las compras grandes.
+
+### 3. Clasificación: ¿la transacción es fraude?
+
+**Qué clasificamos:** cada transacción en **legítima (0)** o **fraude (1)**, usando la columna `is_fraud` del dataset. Las clases están muy desbalanceadas: solo cerca del 0,58 % de las transacciones son fraude.
+
+| | |
+|---|---|
+| Predictoras | Las mismas de la regresión más `log_monto`. Aquí el monto sí entra, porque al momento de la compra ya se conoce y es una señal clave de fraude. |
+| Excluida | `es_fraude`, porque es la respuesta. |
+| Algoritmo | `LogisticRegression(class_weight="balanced", max_iter=1000, random_state=42)`. El resto de parámetros por defecto (`penalty="l2"`, `C=1.0`, `solver="lbfgs"`). Umbral de decisión: 0,5. |
+| Configuración | `Pipeline` = transformador del componente 1 + modelo. Usamos la misma división 80/20 estratificada, con semilla 42. |
+| Línea base | `DummyClassifier(strategy="most_frequent")`: siempre dice "legítima". |
+
+**¿Por qué regresión logística?** Por tres razones:
+
+- **Es interpretable.** Cada coeficiente se convierte en una razón de probabilidades (e^coeficiente). Si es mayor que 1, esa característica sube el riesgo de fraude; si es menor que 1, lo baja.
+- **Entrega probabilidades.** Así podemos analizar qué pasa al mover el umbral de decisión.
+- **`class_weight="balanced"` compensa el desbalance.** Sin este ajuste, el modelo aprendería a decir siempre "legítima", porque así acierta el 99,4 %. Con el ajuste, cada fraude pesa como muchas transacciones legítimas al entrenar.
+
+**¿Por qué estas métricas y no solo la exactitud?** Porque la línea base, que nunca detecta un fraude, ya tiene **99,4 % de exactitud**. Por eso nos fijamos en otras:
+
+- **Recall de fraude:** de los fraudes reales, cuántos detecta. Es la principal, porque un fraude perdido es dinero perdido.
+- **Precisión de fraude:** de las alertas que da el modelo, cuántas son fraude de verdad. Mide el costo de las falsas alarmas.
+- **F1:** el equilibrio entre recall y precisión.
+- **PR-AUC:** qué tan bien ordena las transacciones por riesgo, sin depender del umbral. Un modelo al azar obtiene el mismo porcentaje de fraudes que hay en los datos.
+
+El reporte también incluye:
+
+- La **matriz de confusión** del modelo y de la línea base.
+- Una tabla del **efecto del umbral** (0,5 a 0,99): al subir el umbral hay menos falsas alarmas, pero se pierden más fraudes.
+- La **importancia de cada variable**, por permutación con PR-AUC.
+- Un **análisis de errores**: cuántos fraudes se pierden, de qué monto y en qué categorías.
+
+Validamos el código con datos simulados en los que el fraude ocurría de noche, en `shopping_net` y con montos altos. El modelo identificó justo esas variables como las más importantes.
+
+**Limitaciones:**
+
+- El balanceo sube el recall, pero genera muchas falsas alarmas.
+- El modelo es lineal, así que no capta combinaciones como "compra grande **y** de madrugada".
+- No usa el historial de cada cliente.
+- El dataset es simulado.
 
 ## Ejecución local
 

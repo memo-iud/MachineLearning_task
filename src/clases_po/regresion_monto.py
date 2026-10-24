@@ -199,7 +199,9 @@ class RegresionMonto:
             f"(en escala logarítmica). Es un nivel {nivel}.",
             f"- En dólares, se equivoca en promedio por ${m['modelo_usd']['mae']:,.2f}, "
             f"frente a ${m['base_usd']['mae']:,.2f} de la línea base que siempre "
-            f"predice el promedio: {mejora:.1f} % menos error.",
+            f"predice el promedio: "
+            + (f"{mejora:.1f} % menos error." if mejora > 0.5
+               else "prácticamente el mismo error, así que el modelo casi no aporta."),
             f"- La variable más importante es '{imp.index[0]}': si se mezclan sus valores, "
             f"el R2 baja {imp.iloc[0]:.3f}. Le siguen '{imp.index[1]}' ({imp.iloc[1]:.3f}) "
             f"y '{imp.index[2]}' ({imp.iloc[2]:.3f}).",

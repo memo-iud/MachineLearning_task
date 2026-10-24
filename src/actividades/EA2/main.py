@@ -7,8 +7,8 @@ Flujo completo que ejecuta GitHub Actions (``.github/workflows/ea2.yml``):
                              -> clasificación + evaluación
                              -> resumen automático .txt
 
-Estado actual: componentes 0 (DataFrame), 1 (preprocesamiento) y 2 (regresión).
-Los componentes 3 y 4 se agregan en los siguientes pasos.
+Estado actual: componentes 0 (DataFrame), 1 (preprocesamiento), 2 (regresión)
+y 3 (clasificación). El componente 4 se agrega en el siguiente paso.
 
 Ejecución local (desde esta carpeta):
 
@@ -30,6 +30,7 @@ sys.path.insert(0, str(RAIZ / "src"))
 from clases_po import (  # noqa: E402
     CATEGORICAS,
     NUMERICAS,
+    ClasificadorFraude,
     HFDatasetLoader,
     PreprocesadorTransacciones,
     RegresionMonto,
@@ -117,7 +118,20 @@ def main() -> None:
     ruta.write_text(evidencia, encoding="utf-8")
     print(f"[2] Evidencia guardada en {ruta}")
 
-    # TODO componente 3: clasificación (objetivo: is_fraud).
+    # Componente 3: clasificación de fraude (el monto sí entra como predictora).
+    clasificador = ClasificadorFraude(
+        numericas=NUMERICAS + ["log_monto"],
+        categoricas=CATEGORICAS,
+        random_state=SEMILLA,
+        directorio_modelos=MODELOS,
+    )
+    clasificador.ejecutar(preprocesador.df_train, preprocesador.df_test)
+    evidencia = clasificador.generar_evidencia()
+    print(evidencia)
+    ruta = SALIDAS / "03_clasificacion.txt"
+    ruta.write_text(evidencia, encoding="utf-8")
+    print(f"[3] Evidencia guardada en {ruta}")
+
     # TODO componente 4: resumen_modelos.txt con ambos modelos.
 
 
