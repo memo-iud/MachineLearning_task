@@ -7,8 +7,8 @@ Flujo completo que ejecuta GitHub Actions (``.github/workflows/ea2.yml``):
                              -> clasificación + evaluación
                              -> resumen automático .txt
 
-Estado actual: componente 0 (construcción automática del DataFrame).
-Los componentes 1 a 4 se agregan en los siguientes pasos.
+Estado actual: componentes 0 (DataFrame) y 1 (preprocesamiento).
+Los componentes 2 a 4 se agregan en los siguientes pasos.
 
 Ejecución local (desde esta carpeta):
 
@@ -27,7 +27,7 @@ CARPETA_EA2 = Path(__file__).resolve().parent
 RAIZ = CARPETA_EA2.parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-from clases_po import HFDatasetLoader, Reportes  # noqa: E402
+from clases_po import HFDatasetLoader, PreprocesadorTransacciones, Reportes  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Configuración del experimento
@@ -36,6 +36,9 @@ DATASET = "pointe77/credit-card-transaction"
 URL_DATASET = f"https://huggingface.co/datasets/{DATASET}"
 SPLIT = "train"
 OBJETIVO_CLASIFICACION = "is_fraud"
+TAMANO_MUESTRA = 300_000
+TEST_SIZE = 0.2
+SEMILLA = 42
 SALIDAS = CARPETA_EA2 / "salidas"
 
 
@@ -83,7 +86,18 @@ def main() -> None:
     ruta.write_text(texto, encoding="utf-8")
     print(f"[0] Evidencia guardada en {ruta}")
 
-    # TODO componente 1: preprocesamiento (antes/después, split train/test).
+    # Componente 1: preprocesamiento.
+    preprocesador = PreprocesadorTransacciones(
+        tamano_muestra=TAMANO_MUESTRA, test_size=TEST_SIZE, random_state=SEMILLA
+    )
+    preprocesador.ejecutar(df)
+    del df  # libera memoria: desde aquí se trabaja con la muestra
+    evidencia = preprocesador.generar_evidencia()
+    print(evidencia)
+    ruta = SALIDAS / "01_preprocesamiento.txt"
+    ruta.write_text(evidencia, encoding="utf-8")
+    print(f"[1] Evidencia guardada en {ruta}")
+
     # TODO componente 2: regresión lineal (objetivo: amt).
     # TODO componente 3: clasificación (objetivo: is_fraud).
     # TODO componente 4: resumen_modelos.txt con ambos modelos.

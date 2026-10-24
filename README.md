@@ -65,11 +65,42 @@ Transformaciones aplicadas: renombrar las columnas al español, eliminar el índ
 
 ## Actividad 2 — Modelos de predicción y clasificación
 
-> En construcción.
+> En construcción: componentes 0 y 1 listos; faltan los modelos (2 y 3) y el resumen final (4).
 
-- Código: [`src/actividades/EA2/main.py`](src/actividades/EA2/main.py).
+- Código: [`src/actividades/EA2/main.py`](src/actividades/EA2/main.py) (orquesta el flujo) y [`src/clases_po/preprocesador.py`](src/clases_po/preprocesador.py).
 - Salidas: `src/actividades/EA2/salidas/`.
 - Workflow: [`.github/workflows/ea2.yml`](.github/workflows/ea2.yml).
+
+| Evidencia | Archivo generado |
+|---|---|
+| 0. DataFrame construido desde Hugging Face | `salidas/00_dataframe_inicial.txt` |
+| 1. Preprocesamiento (antes, operaciones, después) | `salidas/01_preprocesamiento.txt` |
+
+### 0. Construcción del DataFrame
+
+`main.py` descarga el split `train` completo con `HFDatasetLoader`, sin archivos manuales. El reporte `00_dataframe_inicial.txt` muestra el tamaño, las columnas, los tipos, una muestra y cuántas transacciones son fraude.
+
+En la ejecución real el dataset tiene **1.296.675 transacciones y 24 columnas**. Solo **7.506 son fraude (0,579 %)**, así que las clases están muy desbalanceadas. Además, la única columna con nulos es `merch_zipcode`, con 195.973 (15 %).
+
+Con este dataset planteamos dos problemas:
+
+- **Regresión:** predecir el **monto** de una transacción (variable numérica continua).
+- **Clasificación:** predecir si una transacción es **fraude o no** (`is_fraud`, variable categórica 0/1). Esta etiqueta ya viene en el dataset; no la construimos a partir de otra columna.
+
+### 1. Preprocesamiento
+
+Todas las operaciones están en la clase `PreprocesadorTransacciones`. Cada ejecución deja en `01_preprocesamiento.txt` el antes y el después, y el motivo y el efecto de cada paso.
+
+| Paso | Qué hacemos | Por qué |
+|---|---|---|
+| Muestreo | Tomamos 300.000 filas estratificadas por fraude, con semilla 42. | El dataset completo hace muy lenta cada ejecución en GitHub. Al estratificar, la muestra conserva el mismo 0,579 % de fraudes. |
+| Selección de variables | Eliminamos 12 columnas. | Unas son datos personales o identificadores (nombre, apellido, calle, número de tarjeta, número de transacción). Otras repiten información (`unix_time`, `zip`) o tienen cientos de valores distintos (comercio, ciudad, profesión), lo que no le sirve a un modelo lineal. También sale `merch_zipcode`, que tiene muchos nulos y repite la ubicación del comercio. |
+| Renombrar | Pasamos las columnas al español. | Mantener el mismo idioma de la EA1. |
+| Duplicados | Revisamos y eliminamos filas repetidas. | Una fila repetida pesaría doble al entrenar. |
+| Tipos | Convertimos las fechas de texto a fecha. | Así se puede calcular con ellas. |
+| Variables nuevas | `hora`, `dia_semana`, `edad`, `distancia_km`, `log_poblacion` y `log_monto`. | La hora y el día pueden mostrar patrones de fraude. La edad ahora se calcula exacta y no solo por año. La distancia resume en un dato las coordenadas del cliente y del comercio. El logaritmo reduce el efecto de unos pocos valores muy grandes en la población y el monto. |
+| Entrenamiento / prueba | 80 % / 20 %, estratificado por fraude, con semilla 42. | Evaluar con datos que el modelo no vio. Los dos modelos usan la misma división. |
+| Escalado y codificación | `StandardScaler` para las numéricas y One-hot (`drop="first"`) para `categoria`, `genero`, `estado`, `hora` y `dia_semana`. | Los modelos lineales necesitan números en escalas parecidas. Estos pasos **se ajustan solo con el conjunto de entrenamiento** y después se aplican al de prueba. El reporte lo demuestra: en entrenamiento las numéricas quedan con media 0 y desviación 1, y en prueba solo se acercan a esos valores. |
 
 ## Ejecución local
 
