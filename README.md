@@ -123,6 +123,13 @@ Todas las operaciones están en la clase `PreprocesadorTransacciones`. Cada ejec
 - En una **numérica**, el efecto es el de aumentar una desviación estándar, porque las variables están escaladas. El reporte muestra cuánto vale esa desviación en unidades reales (años o km).
 - El **intercepto** es el monto típico del caso de referencia con las numéricas en su promedio.
 
+**Dos ajustes después de la primera ejecución real:**
+
+- **Categorías raras agrupadas en "otros".** En la primera ejecución, el estado de Delaware (DE) salió con un efecto de +1002 %. El motivo es que en el dataset casi no tiene transacciones, y las pocas que tiene son compras grandes, así que el modelo memorizaba esos casos. Por eso el One-hot ahora agrupa en "otros" toda categoría con menos de 100 casos en entrenamiento (`min_frequency=100`). El reporte muestra cuáles se agruparon.
+- **Importancia por permutación.** Para decidir qué variable pesa más ya no miramos el coeficiente más grande, porque lo puede inflar una categoría rara. En cambio, medimos cuánto baja el R² en prueba cuando se mezclan al azar los valores de cada variable.
+
+También vale la pena aclarar que el R² en dólares puede salir negativo aunque el MAE mejore. Al devolver el logaritmo a dólares, el modelo estima el monto *típico* y no el promedio, y el R² en dólares lo dominan las pocas compras gigantes. Por eso, para leer el error real usamos el MAE en dólares.
+
 Validamos el código con datos simulados en los que pusimos efectos conocidos (+200 % y −50 %), y el modelo los recuperó casi exactos (+200,6 % y −49,5 %).
 
 Los resultados y la interpretación de cada ejecución se calculan solos y quedan en `02_regresion.txt`. **Limitaciones:** el dataset no dice qué se compró, que es lo que más define el monto. Además, el modelo lineal solo suma efectos y no capta combinaciones, y con el logaritmo tiende a quedarse corto en las compras grandes.

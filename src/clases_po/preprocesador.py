@@ -70,6 +70,9 @@ COLUMNAS_REEMPLAZADAS = {
 
 DIAS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
 
+# Una categoría con menos casos que esto en entrenamiento se agrupa en "otros".
+MIN_FRECUENCIA = 100
+
 # Variables que pueden usar los modelos.
 CATEGORICAS = ["categoria", "genero", "estado", "hora", "dia_semana"]
 NUMERICAS = ["edad", "distancia_km", "log_poblacion"]
@@ -261,11 +264,19 @@ class PreprocesadorTransacciones:
         ``drop="first"`` deja fuera una categoría de cada variable como
         referencia, para que los coeficientes de la regresión se puedan
         interpretar sin redundancia.
+
+        ``min_frequency`` agrupa en "otros" las categorías con muy pocos casos
+        en entrenamiento: con tan pocos ejemplos el modelo solo memorizaría
+        esas filas y daría coeficientes exagerados.
         """
         return ColumnTransformer(
             [
                 ("num", StandardScaler(), numericas),
-                ("cat", OneHotEncoder(drop="first", handle_unknown="ignore"), categoricas),
+                ("cat", OneHotEncoder(
+                    drop="first",
+                    handle_unknown="infrequent_if_exist",
+                    min_frequency=MIN_FRECUENCIA,
+                ), categoricas),
             ],
             sparse_threshold=0.0,  # matriz densa: el tamaño es manejable y simplifica los modelos
         )
@@ -310,15 +321,23 @@ class PreprocesadorTransacciones:
             }
         ).round(4) + 0.0  # + 0.0 evita que se imprima "-0.0"
         codificador = transformador.named_transformers_["cat"]
+        nombres_cat = transformador.named_transformers_["cat"].get_feature_names_out()
         columnas_cat = {
-            var: len(cats) - 1 for var, cats in zip(CATEGORICAS, codificador.categories_)
+            var: sum(n.startswith(f"{var}_") for n in nombres_cat) for var in CATEGORICAS
+        }
+        agrupadas = {
+            var: [str(v) for v in inf]
+            for var, inf in zip(CATEGORICAS, codificador.infrequent_categories_)
+            if inf is not None and len(inf)
         }
         return "\n".join(
             [
                 "Transformador (ajustado solo con entrenamiento):",
                 f"- StandardScaler sobre: {', '.join(numericas)}",
-                f"- OneHotEncoder(drop='first', handle_unknown='ignore') sobre: {', '.join(CATEGORICAS)}",
+                f"- OneHotEncoder(drop='first', min_frequency={MIN_FRECUENCIA}) sobre: {', '.join(CATEGORICAS)}",
                 f"- Columnas creadas por variable categórica: {columnas_cat}",
+                "- Categorías agrupadas en 'otros' por tener menos de "
+                f"{MIN_FRECUENCIA} casos en entrenamiento: {agrupadas if agrupadas else 'ninguna'}",
                 f"- Matriz final: entrenamiento {X_train.shape}, prueba {X_test.shape}",
                 "",
                 "Numéricas escaladas (entrenamiento ~ media 0 y desv. 1; prueba solo se aproxima):",

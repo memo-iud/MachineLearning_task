@@ -20,6 +20,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from sklearn.dummy import DummyRegressor
+from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
@@ -63,6 +64,8 @@ class RegresionMonto:
         self.intercepto: float | None = None
         self.referencias: dict[str, Any] = {}
         self.ruta_modelo: Path | None = None
+        self.importancia: pd.Series | None = None
+        self.agrupadas: dict[str, list[str]] = {}
         self.filas_train = self.filas_test = 0
 
     @property
@@ -119,6 +122,15 @@ class RegresionMonto:
             "base_usd": self._metricas(dolares, np.expm1(base_log)),
         }
         self.filas_test = len(test)
+        # Importancia por permutación: cuánto baja el R2 si se mezclan al azar
+        # los valores de una variable (en prueba). Es más confiable que mirar
+        # el coeficiente más grande, que puede venir de una categoría rara.
+        resultado = permutation_importance(
+            self.pipeline, X, y_log, scoring="r2", n_repeats=3, random_state=42
+        )
+        self.importancia = pd.Series(
+            resultado.importances_mean, index=self.predictoras
+        ).sort_values(ascending=False)
         m = self.metricas["modelo_log"]
         print(f"[regresion] prueba: R2={m['r2']:.4f}; MAE(log)={m['mae']:.4f}; "
               f"MAE(USD)={self.metricas['modelo_usd']['mae']:.2f}")
@@ -135,9 +147,15 @@ class RegresionMonto:
         modelo = self.pipeline.named_steps["modelo"]
         escalador = prep.named_transformers_["num"]
         codificador = prep.named_transformers_["cat"]
-        self.referencias = {
-            var: cats[0] for var, cats in zip(self.categoricas, codificador.categories_)
+        self.agrupadas = {
+            var: [str(v) for v in inf]
+            for var, inf in zip(self.categoricas, codificador.infrequent_categories_)
+            if inf is not None and len(inf)
         }
+        self.referencias = {}
+        for var, cats, idx in zip(self.categoricas, codificador.categories_, codificador.drop_idx_):
+            ref = cats[idx]
+            self.referencias[var] = "otros" if str(ref) in self.agrupadas.get(var, []) else ref
 
         filas = []
         nombres = prep.get_feature_names_out()
@@ -150,6 +168,8 @@ class RegresionMonto:
             else:
                 variable = next(v for v in self.categoricas if columna.startswith(f"{v}_"))
                 valor = columna[len(variable) + 1:]
+                if valor == "infrequent_sklearn":
+                    valor = "otros"
                 lectura = f"'{valor}' vs '{self.referencias[variable]}'"
             filas.append({
                 "variable": variable,
@@ -170,12 +190,9 @@ class RegresionMonto:
         r2 = m["modelo_log"]["r2"]
         mejora = (1 - m["modelo_usd"]["mae"] / m["base_usd"]["mae"]) * 100
         tabla = self.tabla_coeficientes
-        importancia = (
-            tabla.assign(abs_efecto=tabla["efecto_%"].abs())
-            .groupby("variable")["abs_efecto"].max()
-            .sort_values(ascending=False)
-        )
-        cat = tabla[tabla["variable"] == "categoria"].sort_values("efecto_%")
+        imp = self.importancia
+        cat = tabla[(tabla["variable"] == "categoria") & (tabla["valor"] != "otros")]
+        cat = cat.sort_values("efecto_%")
         nivel = "bajo" if r2 < 0.3 else "moderado" if r2 < 0.6 else "alto"
         return [
             f"- El modelo explica el {r2 * 100:.1f} % de la variación del monto "
@@ -183,10 +200,9 @@ class RegresionMonto:
             f"- En dólares, se equivoca en promedio por ${m['modelo_usd']['mae']:,.2f}, "
             f"frente a ${m['base_usd']['mae']:,.2f} de la línea base que siempre "
             f"predice el promedio: {mejora:.1f} % menos error.",
-            f"- La variable con el efecto individual más grande es '{importancia.index[0]}' "
-            f"(hasta {importancia.iloc[0]:.1f} %)"
-            + (f", seguida de '{importancia.index[1]}' (hasta {importancia.iloc[1]:.1f} %)."
-               if len(importancia) > 1 else "."),
+            f"- La variable más importante es '{imp.index[0]}': si se mezclan sus valores, "
+            f"el R2 baja {imp.iloc[0]:.3f}. Le siguen '{imp.index[1]}' ({imp.iloc[1]:.3f}) "
+            f"y '{imp.index[2]}' ({imp.iloc[2]:.3f}).",
             f"- Por categoría de comercio, el monto esperado más alto es en "
             f"'{cat.iloc[-1]['valor']}' ({cat.iloc[-1]['efecto_%']:+.1f} %) y el más "
             f"bajo en '{cat.iloc[0]['valor']}' ({cat.iloc[0]['efecto_%']:+.1f} %), "
@@ -199,7 +215,16 @@ class RegresionMonto:
                 if m["modelo_usd"]["rmse"] > 1.5 * m["modelo_usd"]["mae"]
                 else "- El RMSE y el MAE en dólares son parecidos: no hay errores extremos dominando."
             ),
-        ]
+        ] + (
+            [
+                f"- El R2 en dólares ({m['modelo_usd']['r2']:.3f}) sale más bajo que en escala "
+                f"log{', incluso negativo' if m['modelo_usd']['r2'] < 0 else ''}. No es una contradicción: al volver a dólares el modelo "
+                "estima el monto típico de una compra, no el promedio, y el R2 en dólares lo "
+                "dominan las pocas compras gigantes. Por eso el MAE en dólares es la métrica "
+                "más útil para leer el error real."
+            ]
+            if m["modelo_usd"]["r2"] < m["modelo_log"]["r2"] - 0.05 else []
+        )
 
     def generar_evidencia(self) -> str:
         if self.metricas is None:
@@ -250,13 +275,18 @@ class RegresionMonto:
             "- MAE: error promedio, sin importar el signo.",
             "- RMSE: castiga más los errores grandes.",
             "- R2: proporción de la variación del objetivo que explica el modelo "
-            "(1 = perfecto, 0 = igual que predecir el promedio).",
+            "(1 = perfecto, 0 = igual que predecir el promedio, negativo = peor que eso).",
             "- En USD las predicciones se devuelven a dólares con exp(x) - 1.",
             "",
             "INTERCEPTO",
             f"- Valor: {self.intercepto:.4f} en escala log, unos ${base_usd:,.2f}.",
             f"- Es el monto típico estimado para el caso de referencia ({ref}) "
             "con las variables numéricas en su promedio.",
+            "",
+            "IMPORTANCIA DE CADA VARIABLE (por permutación, en prueba)",
+            "Cuánto baja el R2 si se mezclan al azar los valores de esa variable "
+            "(3 repeticiones, semilla 42):",
+            self.importancia.round(4).rename("baja_del_R2").to_string(),
             "",
             "COEFICIENTES",
             "Como el objetivo es un logaritmo, cada coeficiente se lee como un cambio "
@@ -266,6 +296,8 @@ class RegresionMonto:
             num[["variable", "lectura", "coeficiente", "efecto_%"]].round(4).to_string(index=False),
             "",
             "Categóricas: efecto frente a la categoría de referencia.",
+            "Categorías agrupadas en 'otros' por tener muy pocos casos: "
+            f"{self.agrupadas if self.agrupadas else 'ninguna'}.",
         ]
         for variable in self.categoricas:
             sub = cat[cat["variable"] == variable].sort_values("efecto_%", ascending=False)
