@@ -266,7 +266,8 @@ class PreprocesadorTransacciones:
             [
                 ("num", StandardScaler(), numericas),
                 ("cat", OneHotEncoder(drop="first", handle_unknown="ignore"), categoricas),
-            ]
+            ],
+            sparse_threshold=0.0,  # matriz densa: el tamaño es manejable y simplifica los modelos
         )
 
     def ejecutar(self, df: pd.DataFrame) -> dict[str, Any]:

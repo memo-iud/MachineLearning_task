@@ -65,9 +65,9 @@ Transformaciones aplicadas: renombrar las columnas al español, eliminar el índ
 
 ## Actividad 2 — Modelos de predicción y clasificación
 
-> En construcción: componentes 0 y 1 listos; faltan los modelos (2 y 3) y el resumen final (4).
+> En construcción: componentes 0, 1 y 2 listos; faltan la clasificación (3) y el resumen final (4).
 
-- Código: [`src/actividades/EA2/main.py`](src/actividades/EA2/main.py) (orquesta el flujo) y [`src/clases_po/preprocesador.py`](src/clases_po/preprocesador.py).
+- Código: [`src/actividades/EA2/main.py`](src/actividades/EA2/main.py) (orquesta el flujo), [`src/clases_po/preprocesador.py`](src/clases_po/preprocesador.py) y [`src/clases_po/regresion_monto.py`](src/clases_po/regresion_monto.py).
 - Salidas: `src/actividades/EA2/salidas/`.
 - Workflow: [`.github/workflows/ea2.yml`](.github/workflows/ea2.yml).
 
@@ -75,6 +75,7 @@ Transformaciones aplicadas: renombrar las columnas al español, eliminar el índ
 |---|---|
 | 0. DataFrame construido desde Hugging Face | `salidas/00_dataframe_inicial.txt` |
 | 1. Preprocesamiento (antes, operaciones, después) | `salidas/01_preprocesamiento.txt` |
+| 2. Regresión lineal (configuración, métricas, coeficientes, interpretación) | `salidas/02_regresion.txt` |
 
 ### 0. Construcción del DataFrame
 
@@ -101,6 +102,30 @@ Todas las operaciones están en la clase `PreprocesadorTransacciones`. Cada ejec
 | Variables nuevas | `hora`, `dia_semana`, `edad`, `distancia_km`, `log_poblacion` y `log_monto`. | La hora y el día pueden mostrar patrones de fraude. La edad ahora se calcula exacta y no solo por año. La distancia resume en un dato las coordenadas del cliente y del comercio. El logaritmo reduce el efecto de unos pocos valores muy grandes en la población y el monto. |
 | Entrenamiento / prueba | 80 % / 20 %, estratificado por fraude, con semilla 42. | Evaluar con datos que el modelo no vio. Los dos modelos usan la misma división. |
 | Escalado y codificación | `StandardScaler` para las numéricas y One-hot (`drop="first"`) para `categoria`, `genero`, `estado`, `hora` y `dia_semana`. | Los modelos lineales necesitan números en escalas parecidas. Estos pasos **se ajustan solo con el conjunto de entrenamiento** y después se aplican al de prueba. El reporte lo demuestra: en entrenamiento las numéricas quedan con media 0 y desviación 1, y en prueba solo se acercan a esos valores. |
+
+### 2. Regresión lineal: estimar el monto de una compra
+
+**Pregunta:** ¿qué tanto podemos estimar el monto de una compra a partir del tipo de comercio, el momento de la compra, el perfil del cliente y la distancia al comercio?
+
+| | |
+|---|---|
+| Variable objetivo | `log_monto` = log(1 + monto). El monto tiene pocas compras muy grandes y muchas pequeñas; con el logaritmo esas compras grandes no dominan la recta. |
+| Predictoras | `categoria`, `hora`, `dia_semana`, `genero`, `estado` (categóricas) y `edad`, `distancia_km`, `log_poblacion` (numéricas). |
+| Excluidas a propósito | `monto` y `log_monto`, porque son la respuesta, y `es_fraude`, porque al momento de la compra no se sabe si es fraude. |
+| Algoritmo | `LinearRegression()` de scikit-learn con **parámetros por defecto** (`fit_intercept=True`). |
+| Configuración | `Pipeline` = transformador del componente 1 + regresión. Usamos la misma división 80/20 del componente 1, con semilla 42. |
+| Línea base | `DummyRegressor(strategy="mean")`: siempre predice el promedio. Sirve para medir cuánto aporta el modelo. |
+| Métricas | MAE, RMSE y R², en escala logarítmica y también en dólares (las predicciones se devuelven a dólares con exp(x) − 1). |
+
+**Cómo leemos los coeficientes.** Como el objetivo es un logaritmo, cada coeficiente se convierte en un cambio porcentual del monto con **efecto % = (e^coeficiente − 1) × 100**:
+
+- En una **categoría** (por ejemplo, `categoria = shopping_net`), el efecto se compara con la categoría de referencia, que es la primera en orden alfabético y la que quita `drop="first"`.
+- En una **numérica**, el efecto es el de aumentar una desviación estándar, porque las variables están escaladas. El reporte muestra cuánto vale esa desviación en unidades reales (años o km).
+- El **intercepto** es el monto típico del caso de referencia con las numéricas en su promedio.
+
+Validamos el código con datos simulados en los que pusimos efectos conocidos (+200 % y −50 %), y el modelo los recuperó casi exactos (+200,6 % y −49,5 %).
+
+Los resultados y la interpretación de cada ejecución se calculan solos y quedan en `02_regresion.txt`. **Limitaciones:** el dataset no dice qué se compró, que es lo que más define el monto. Además, el modelo lineal solo suma efectos y no capta combinaciones, y con el logaritmo tiende a quedarse corto en las compras grandes.
 
 ## Ejecución local
 

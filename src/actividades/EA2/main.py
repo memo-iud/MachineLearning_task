@@ -7,8 +7,8 @@ Flujo completo que ejecuta GitHub Actions (``.github/workflows/ea2.yml``):
                              -> clasificación + evaluación
                              -> resumen automático .txt
 
-Estado actual: componentes 0 (DataFrame) y 1 (preprocesamiento).
-Los componentes 2 a 4 se agregan en los siguientes pasos.
+Estado actual: componentes 0 (DataFrame), 1 (preprocesamiento) y 2 (regresión).
+Los componentes 3 y 4 se agregan en los siguientes pasos.
 
 Ejecución local (desde esta carpeta):
 
@@ -27,7 +27,14 @@ CARPETA_EA2 = Path(__file__).resolve().parent
 RAIZ = CARPETA_EA2.parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-from clases_po import HFDatasetLoader, PreprocesadorTransacciones, Reportes  # noqa: E402
+from clases_po import (  # noqa: E402
+    CATEGORICAS,
+    NUMERICAS,
+    HFDatasetLoader,
+    PreprocesadorTransacciones,
+    RegresionMonto,
+    Reportes,
+)
 
 # ---------------------------------------------------------------------------
 # Configuración del experimento
@@ -40,6 +47,7 @@ TAMANO_MUESTRA = 300_000
 TEST_SIZE = 0.2
 SEMILLA = 42
 SALIDAS = CARPETA_EA2 / "salidas"
+MODELOS = CARPETA_EA2 / "modelos"
 
 
 def construir_dataframe() -> pd.DataFrame:
@@ -98,7 +106,17 @@ def main() -> None:
     ruta.write_text(evidencia, encoding="utf-8")
     print(f"[1] Evidencia guardada en {ruta}")
 
-    # TODO componente 2: regresión lineal (objetivo: amt).
+    # Componente 2: regresión lineal del monto.
+    regresion = RegresionMonto(
+        numericas=NUMERICAS, categoricas=CATEGORICAS, directorio_modelos=MODELOS
+    )
+    regresion.ejecutar(preprocesador.df_train, preprocesador.df_test)
+    evidencia = regresion.generar_evidencia()
+    print(evidencia)
+    ruta = SALIDAS / "02_regresion.txt"
+    ruta.write_text(evidencia, encoding="utf-8")
+    print(f"[2] Evidencia guardada en {ruta}")
+
     # TODO componente 3: clasificación (objetivo: is_fraud).
     # TODO componente 4: resumen_modelos.txt con ambos modelos.
 
