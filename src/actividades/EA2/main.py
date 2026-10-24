@@ -7,9 +7,6 @@ Flujo completo que ejecuta GitHub Actions (``.github/workflows/ea2.yml``):
                              -> clasificación + evaluación
                              -> resumen automático .txt
 
-Estado actual: componentes 0 (DataFrame), 1 (preprocesamiento), 2 (regresión)
-y 3 (clasificación). El componente 4 se agrega en el siguiente paso.
-
 Ejecución local (desde esta carpeta):
 
     python main.py
@@ -35,6 +32,7 @@ from clases_po import (  # noqa: E402
     PreprocesadorTransacciones,
     RegresionMonto,
     Reportes,
+    ResumenModelos,
 )
 
 # ---------------------------------------------------------------------------
@@ -132,7 +130,17 @@ def main() -> None:
     ruta.write_text(evidencia, encoding="utf-8")
     print(f"[3] Evidencia guardada en {ruta}")
 
-    # TODO componente 4: resumen_modelos.txt con ambos modelos.
+    # Componente 4: resumen automático de los dos modelos.
+    resumen = ResumenModelos(
+        dataset=DATASET,
+        url_dataset=URL_DATASET,
+        split=SPLIT,
+        preprocesador=preprocesador,
+        regresion=regresion,
+        clasificador=clasificador,
+    )
+    ruta = resumen.guardar(SALIDAS / "resumen_modelos.txt")
+    print(ruta.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

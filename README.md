@@ -65,9 +65,11 @@ Transformaciones aplicadas: renombrar las columnas al español, eliminar el índ
 
 ## Actividad 2 — Modelos de predicción y clasificación
 
-> En construcción: componentes 0 a 3 listos; falta el resumen final (4).
+**Flujo:** Hugging Face → DataFrame → preprocesamiento → regresión lineal + evaluación → clasificación + evaluación → resumen automático `.txt`. GitHub Actions ejecuta todo el flujo en cada `push`.
 
-- Código: [`src/actividades/EA2/main.py`](src/actividades/EA2/main.py) (orquesta el flujo), [`src/clases_po/preprocesador.py`](src/clases_po/preprocesador.py), [`src/clases_po/regresion_monto.py`](src/clases_po/regresion_monto.py) y [`src/clases_po/clasificacion_fraude.py`](src/clases_po/clasificacion_fraude.py).
+> 📄 **Resumen de los dos modelos:** [`src/actividades/EA2/salidas/resumen_modelos.txt`](src/actividades/EA2/salidas/resumen_modelos.txt), generado automáticamente por la última ejecución. También se puede descargar como artefacto `resumen-modelos-ea2` desde la ejecución en GitHub Actions.
+
+- Código: [`src/actividades/EA2/main.py`](src/actividades/EA2/main.py) (orquesta el flujo), [`src/clases_po/preprocesador.py`](src/clases_po/preprocesador.py), [`src/clases_po/regresion_monto.py`](src/clases_po/regresion_monto.py), [`src/clases_po/clasificacion_fraude.py`](src/clases_po/clasificacion_fraude.py) y [`src/clases_po/resumen_modelos.py`](src/clases_po/resumen_modelos.py).
 - Salidas: `src/actividades/EA2/salidas/`.
 - Workflow: [`.github/workflows/ea2.yml`](.github/workflows/ea2.yml).
 
@@ -77,6 +79,8 @@ Transformaciones aplicadas: renombrar las columnas al español, eliminar el índ
 | 1. Preprocesamiento (antes, operaciones, después) | `salidas/01_preprocesamiento.txt` |
 | 2. Regresión lineal (configuración, métricas, coeficientes, interpretación) | `salidas/02_regresion.txt` |
 | 3. Clasificación (configuración, matriz de confusión, métricas, umbrales, errores) | `salidas/03_clasificacion.txt` |
+| 4. **Resumen de los dos modelos** | `salidas/resumen_modelos.txt` |
+| 5. Workflow, artefactos y commits del bot | [`.github/workflows/ea2.yml`](.github/workflows/ea2.yml) y pestaña **Actions** |
 
 ### 0. Construcción del DataFrame
 
@@ -175,6 +179,40 @@ Validamos el código con datos simulados en los que el fraude ocurría de noche,
 - El modelo es lineal, así que no capta combinaciones como "compra grande **y** de madrugada".
 - No usa el historial de cada cliente.
 - El dataset es simulado.
+
+### 4. Resumen automático de los dos modelos
+
+La clase `ResumenModelos` arma `resumen_modelos.txt` a partir de los objetos ya ejecutados, sin texto escrito a mano. Incluye:
+
+- La **fecha y hora de la ejecución**. Si corre en GitHub Actions, también el enlace a esa ejecución y el commit.
+- La **identificación del dataset** y un resumen del **preprocesamiento**.
+- Para cada modelo: el objetivo, la variable objetivo, las predictoras, el algoritmo, sus parámetros, la configuración de entrenamiento y prueba, las métricas comparadas con la línea base y una interpretación breve.
+- Las **conclusiones y limitaciones**, calculadas con los resultados de esa ejecución.
+
+### 5. Ejecución automática y control de versiones
+
+El workflow [`ea2.yml`](.github/workflows/ea2.yml) se activa solo con cada `push` a `main` que cambie archivos de la EA2, las clases compartidas o las dependencias. También tiene un botón manual (`workflow_dispatch`), pero ese no es el único disparador. El workflow hace lo siguiente:
+
+1. Instala las dependencias.
+2. Ejecuta `python main.py`. Ese script descarga el dataset desde Hugging Face, construye el DataFrame, lo preprocesa, entrena y evalúa los dos modelos, y genera el resumen.
+3. Publica dos artefactos descargables:
+   - **`resumen-modelos-ea2`**: el resumen de los dos modelos.
+   - **`evidencias-ea2`**: todos los `.txt`.
+4. Guarda una copia de las salidas en el repositorio con un commit de `github-actions[bot]`.
+
+**Cómo descargar el resumen:** pestaña **Actions** → "EA2 - Regresión y clasificación" → la última ejecución en verde → sección **Artifacts** → `resumen-modelos-ea2`.
+
+## Checklist de entrega (EA2)
+
+- [x] Dataset exclusivo del grupo, con identificador y enlace documentados.
+- [x] DataFrame construido automáticamente desde Hugging Face.
+- [x] Preprocesamiento justificado, con evidencias antes y después.
+- [x] Regresión lineal con variables, parámetros, evaluación e interpretación.
+- [x] Clasificación con justificación del algoritmo, variables, parámetros, evaluación e interpretación.
+- [x] Resumen automático en un `.txt` con los resultados de ambos modelos.
+- [x] Ejecución automática en GitHub Actions, con el resumen disponible como artefacto.
+- [x] Control de versiones e instrucciones de ejecución.
+- [ ] Acceso para el docente (si el repositorio es privado) y enlaces subidos a Canvas.
 
 ## Ejecución local
 

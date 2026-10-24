@@ -52,10 +52,17 @@ jobs:
         working-directory: src/actividades/EA2
         run: python main.py
 
-      - name: Publicar resumen como artefacto
+      - name: Publicar resumen de los modelos como artefacto
         uses: actions/upload-artifact@v4
         with:
-          name: resultados-ea2
+          name: resumen-modelos-ea2
+          path: src/actividades/EA2/salidas/resumen_modelos.txt
+          if-no-files-found: error
+
+      - name: Publicar todas las evidencias como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-ea2
           path: src/actividades/EA2/salidas/
           if-no-files-found: error
 
