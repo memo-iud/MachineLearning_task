@@ -1,0 +1,89 @@
+EA2 - COMPONENTE 0: DATAFRAME CONSTRUIDO DESDE HUGGING FACE
+======================================================================
+Fecha de ejecución: 2026-10-24T01:36:51
+Dataset: pointe77/credit-card-transaction
+Enlace: https://huggingface.co/datasets/pointe77/credit-card-transaction
+Split: train
+
+REPORTE DEL DATAFRAME
+============================================================
+Filas: 1296675
+Columnas: 24
+Duplicados: 0
+
+Columnas y tipos:
+- Unnamed: 0: int64
+- trans_date_trans_time: object
+- cc_num: int64
+- merchant: object
+- category: object
+- amt: float64
+- first: object
+- last: object
+- gender: object
+- street: object
+- city: object
+- state: object
+- zip: int64
+- lat: float64
+- long: float64
+- city_pop: int64
+- job: object
+- dob: object
+- trans_num: object
+- unix_time: int64
+- merch_lat: float64
+- merch_long: float64
+- is_fraud: int64
+- merch_zipcode: float64
+
+Valores nulos por columna:
+- Unnamed: 0: 0
+- trans_date_trans_time: 0
+- cc_num: 0
+- merchant: 0
+- category: 0
+- amt: 0
+- first: 0
+- last: 0
+- gender: 0
+- street: 0
+- city: 0
+- state: 0
+- zip: 0
+- lat: 0
+- long: 0
+- city_pop: 0
+- job: 0
+- dob: 0
+- trans_num: 0
+- unix_time: 0
+- merch_lat: 0
+- merch_long: 0
+- is_fraud: 0
+- merch_zipcode: 195973
+
+Estadísticas numéricas:
+        Unnamed: 0        cc_num          amt          zip          lat         long     city_pop     unix_time    merch_lat   merch_long     is_fraud  merch_zipcode
+count  1296675.000  1.296675e+06  1296675.000  1296675.000  1296675.000  1296675.000  1296675.000  1.296675e+06  1296675.000  1296675.000  1296675.000    1100702.000
+mean    648337.000  4.171920e+17       70.351    48800.671       38.538      -90.226    88824.441  1.349244e+09       38.537      -90.226        0.006      46825.754
+std     374317.974  1.308806e+18      160.316    26893.222        5.076       13.759   301956.361  1.284128e+07        5.110       13.771        0.076      25834.001
+min          0.000  6.041621e+10        1.000     1257.000       20.027     -165.672       23.000  1.325376e+09       19.028     -166.671        0.000       1001.000
+25%     324168.500  1.800429e+14        9.650    26237.000       34.620      -96.798      743.000  1.338751e+09       34.734      -96.897        0.000      25114.000
+50%     648337.000  3.521417e+15       47.520    48174.000       39.354      -87.477     2456.000  1.349250e+09       39.366      -87.438        0.000      45860.000
+75%     972505.500  4.642255e+15       83.140    72042.000       41.940      -80.158    20328.000  1.359385e+09       41.957      -80.237        0.000      68319.000
+max    1296674.000  4.992346e+18    28948.900    99783.000       66.693      -67.950  2906700.000  1.371817e+09       67.510      -66.951        1.000      99403.000
+
+Muestra del contenido (5 filas):
+   Unnamed: 0 trans_date_trans_time            cc_num                            merchant       category     amt      first     last gender                        street            city state    zip      lat      long  city_pop                                job         dob                         trans_num   unix_time  merch_lat  merch_long  is_fraud  merch_zipcode
+0           0   2019-01-01 00:00:18  2703186189652095          fraud_Rippin, Kub and Mann       misc_net    4.97   Jennifer    Banks      F                561 Perry Cove  Moravian Falls    NC  28654  36.0788  -81.1781      3495          Psychologist, counselling  1988-03-09  0b242abb623afc578575680df30655b9  1325376018  36.011293  -82.048315         0        28705.0
+1           1   2019-01-01 00:00:44      630423337322     fraud_Heller, Gutmann and Zieme    grocery_pos  107.23  Stephanie     Gill      F  43039 Riley Greens Suite 393          Orient    WA  99160  48.8878 -118.2105       149  Special educational needs teacher  1978-06-21  1f76529f8574734946361c461b024d99  1325376044  49.159047 -118.186462         0            NaN
+2           2   2019-01-01 00:00:51    38859492057661                fraud_Lind-Buckridge  entertainment  220.11     Edward  Sanchez      M      594 White Dale Suite 530      Malad City    ID  83252  42.1808 -112.2620      4154        Nature conservation officer  1962-01-19  a1a22d70485983eac12b5b88dad1cf95  1325376051  43.150704 -112.154481         0        83236.0
+3           3   2019-01-01 00:01:16  3534093764340240  fraud_Kutch, Hermiston and Farrell  gas_transport   45.00     Jeremy    White      M   9443 Cynthia Court Apt. 038         Boulder    MT  59632  46.2306 -112.1138      1939                    Patent attorney  1967-01-12  6b849c168bdad6f867558c3793159a81  1325376076  47.034331 -112.561071         0            NaN
+4           4   2019-01-01 00:03:06   375534208663984                 fraud_Keeling-Crist       misc_pos   41.96      Tyler   Garcia      M              408 Bradley Rest        Doe Hill    VA  24433  38.4207  -79.4629        99     Dance movement psychotherapist  1986-03-28  a41d7549acf90789359a9aa5346dcb46  1325376186  38.674999  -78.632459         0        22844.0
+
+Distribución de 'is_fraud' (0 = legítima, 1 = fraude):
+          transacciones       %
+is_fraud                       
+0               1289169  99.421
+1                  7506   0.579
