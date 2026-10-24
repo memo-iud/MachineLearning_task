@@ -24,12 +24,23 @@ linea_base (USD)  55.0479  154.5066 -0.0614
 Cómo leer las métricas:
 - MAE: error promedio, sin importar el signo.
 - RMSE: castiga más los errores grandes.
-- R2: proporción de la variación del objetivo que explica el modelo (1 = perfecto, 0 = igual que predecir el promedio).
+- R2: proporción de la variación del objetivo que explica el modelo (1 = perfecto, 0 = igual que predecir el promedio, negativo = peor que eso).
 - En USD las predicciones se devuelven a dólares con exp(x) - 1.
 
 INTERCEPTO
 - Valor: 3.6173 en escala log, unos $36.24.
 - Es el monto típico estimado para el caso de referencia (categoria='entertainment', genero='F', estado='AK', hora='0', dia_semana='domingo') con las variables numéricas en su promedio.
+
+IMPORTANCIA DE CADA VARIABLE (por permutación, en prueba)
+Cuánto baja el R2 si se mezclan al azar los valores de esa variable (3 repeticiones, semilla 42):
+categoria        0.3532
+estado           0.0090
+hora             0.0079
+edad             0.0072
+genero           0.0021
+log_poblacion    0.0009
+distancia_km    -0.0000
+dia_semana      -0.0000
 
 COEFICIENTES
 Como el objetivo es un logaritmo, cada coeficiente se lee como un cambio porcentual: efecto_% = (exp(coeficiente) - 1) * 100.
@@ -41,6 +52,7 @@ Numéricas (escaladas): efecto de aumentar una desviación estándar.
 log_poblacion  +1 desviación (2.45)      -0.0288   -2.8360
 
 Categóricas: efecto frente a la categoría de referencia.
+Categorías agrupadas en 'otros' por tener muy pocos casos: {'estado': ['DE']}.
 * categoria (referencia: 'entertainment')
          valor  coeficiente  efecto_%
    grocery_pos       0.8932  144.2814
@@ -63,7 +75,7 @@ valor  coeficiente  efecto_%
 
 * estado (referencia: 'AK')
 valor  coeficiente  efecto_%
-   DE       2.4005 1002.8932
+otros       2.4005 1002.8932
    VT       0.3444   41.1205
    CO       0.2830   32.7105
    NC       0.2622   29.9770
@@ -152,9 +164,10 @@ miercoles       0.0232    2.3521
 INTERPRETACIÓN (calculada con esta ejecución)
 - El modelo explica el 20.1 % de la variación del monto (en escala logarítmica). Es un nivel bajo.
 - En dólares, se equivoca en promedio por $46.92, frente a $55.05 de la línea base que siempre predice el promedio: 14.8 % menos error.
-- La variable con el efecto individual más grande es 'estado' (hasta 1002.9 %), seguida de 'categoria' (hasta 144.3 %).
+- La variable más importante es 'categoria': si se mezclan sus valores, el R2 baja 0.353. Le siguen 'estado' (0.009) y 'hora' (0.008).
 - Por categoría de comercio, el monto esperado más alto es en 'grocery_pos' (+144.3 %) y el más bajo en 'travel' (-70.0 %), comparados con 'entertainment'.
 - El RMSE en dólares ($153.87) es 3.3 veces el MAE: unas pocas compras muy grandes generan errores enormes que el modelo no anticipa.
+- El R2 en dólares (-0.053) sale más bajo que en escala log, incluso negativo. No es una contradicción: al volver a dólares el modelo estima el monto típico de una compra, no el promedio, y el R2 en dólares lo dominan las pocas compras gigantes. Por eso el MAE en dólares es la métrica más útil para leer el error real.
 
 LIMITACIONES
 - El monto depende sobre todo de qué se compra, y ese dato no está en el dataset.

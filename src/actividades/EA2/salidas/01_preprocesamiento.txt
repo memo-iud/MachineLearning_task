@@ -75,8 +75,9 @@ OPERACIONES APLICADAS (en orden)
 
 Transformador (ajustado solo con entrenamiento):
 - StandardScaler sobre: edad, distancia_km, log_poblacion, log_monto
-- OneHotEncoder(drop='first', handle_unknown='ignore') sobre: categoria, genero, estado, hora, dia_semana
+- OneHotEncoder(drop='first', min_frequency=100) sobre: categoria, genero, estado, hora, dia_semana
 - Columnas creadas por variable categórica: {'categoria': 13, 'genero': 1, 'estado': 50, 'hora': 23, 'dia_semana': 6}
+- Categorías agrupadas en 'otros' por tener menos de 100 casos en entrenamiento: {'estado': ['DE']}
 - Matriz final: entrenamiento (240000, 97), prueba (60000, 97)
 
 Numéricas escaladas (entrenamiento ~ media 0 y desv. 1; prueba solo se aproxima):
