@@ -220,5 +220,7 @@ __marimo__/
 .streamlit/secrets.toml
 # Datos descargados y modelos entrenados: se generan en cada ejecución
 src/actividades/*/datos/
+# Excepción: la EA1 usa solo 100 filas, así que su CSV sí se versiona
+!src/actividades/EA1/datos/
 src/actividades/*/modelos/
 *.pkl

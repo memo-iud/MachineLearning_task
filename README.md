@@ -57,6 +57,7 @@ Los resultados no se generan ni se suben a mano: los archivos `.txt` y las salid
 ## Actividad 1 — Obtener y preparar datos desde Hugging Face
 
 - Notebook: [`src/actividades/EA1/EA1.ipynb`](src/actividades/EA1/EA1.ipynb). Allí se explica cada transformación.
+- Datos cargados (100 filas): `src/actividades/EA1/datos/pointe77/credit-card-transaction.csv`.
 - Resumen generado: `src/actividades/EA1/reportes/pointe77/credit-card-transaction.txt`.
 - Workflow: [`.github/workflows/ea1.yml`](.github/workflows/ea1.yml).
 

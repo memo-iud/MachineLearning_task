@@ -60,6 +60,7 @@ jobs:
         with:
           name: resultados-ea1
           path: |
+            src/actividades/EA1/datos/
             src/actividades/EA1/reportes/
             src/actividades/EA1/EA1.ipynb
           if-no-files-found: error
@@ -69,7 +70,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/actividades/EA1/reportes src/actividades/EA1/EA1.ipynb
+          git add src/actividades/EA1/datos src/actividades/EA1/reportes src/actividades/EA1/EA1.ipynb
           if git diff --cached --quiet; then
             echo "No hubo cambios en los resultados."
             exit 0
