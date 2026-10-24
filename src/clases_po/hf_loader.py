@@ -6,7 +6,7 @@ from typing import Literal
 from datasets import load_dataset  
 import pandas as pd
 
-FileType = Literal["csv", "json", "parquet", "xlsx"]            
+FileType = Literal["csv", "json", "parquet", "xlsx"]
 
 class HFDatasetLoader:
     """Descarga un dataset de Hugging Face y lo devuelve como DataFrame.
@@ -69,7 +69,6 @@ class HFDatasetLoader:
             dataset = dataset.select(range(min(self.max_rows, len(dataset))))
 
         self.df = dataset.to_pandas()
-        self.df=self.df [:100]
         if self.filename is not None:
             self._save(self.df)
         return self.df

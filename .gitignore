@@ -218,4 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-src/actividades/datos/pointe77/credit-card-transaction.csv
+# Datos descargados y modelos entrenados: se generan en cada ejecución
+src/actividades/*/datos/
+src/actividades/*/modelos/
+*.pkl

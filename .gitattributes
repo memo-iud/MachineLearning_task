@@ -1,0 +1,6 @@
+# Normaliza finales de línea: evita que Windows (CRLF) muestre
+# todos los archivos como modificados sin cambios reales.
+* text=auto eol=lf
+*.ipynb text eol=lf
+*.png binary
+*.pkl binary
