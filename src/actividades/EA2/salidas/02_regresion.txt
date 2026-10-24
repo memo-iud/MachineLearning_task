@@ -1,0 +1,163 @@
+EA2 - COMPONENTE 2: REGRESIÓN LINEAL
+======================================================================
+
+PREGUNTA
+¿Qué tanto podemos estimar el monto de una compra a partir del tipo de comercio, el momento de la compra, el perfil del cliente y la distancia al comercio?
+
+CONFIGURACIÓN
+- Variable objetivo: log_monto = log(1 + monto)
+- Predictoras numéricas: edad, distancia_km, log_poblacion
+- Predictoras categóricas: categoria, genero, estado, hora, dia_semana
+- Excluidas a propósito: monto y log_monto (son la respuesta); es_fraude (no se conoce al momento de la compra).
+- Algoritmo: sklearn.linear_model.LinearRegression con parámetros por defecto (fit_intercept=True, positive=False).
+- Preparación dentro del Pipeline: StandardScaler (numéricas) y OneHotEncoder(drop='first') (categóricas), ajustados solo con entrenamiento.
+- Entrenamiento: 240,000 filas | Prueba: 60,000 filas (misma división del componente 1, semilla 42).
+- Línea base: DummyRegressor(strategy='mean'), siempre predice el promedio de entrenamiento.
+
+EVALUACIÓN EN PRUEBA
+                      mae      rmse      r2
+modelo (log)       0.8665    1.1508  0.2006
+linea_base (log)   1.0751    1.2871 -0.0000
+modelo (USD)      46.9189  153.8699 -0.0526
+linea_base (USD)  55.0479  154.5066 -0.0614
+
+Cómo leer las métricas:
+- MAE: error promedio, sin importar el signo.
+- RMSE: castiga más los errores grandes.
+- R2: proporción de la variación del objetivo que explica el modelo (1 = perfecto, 0 = igual que predecir el promedio).
+- En USD las predicciones se devuelven a dólares con exp(x) - 1.
+
+INTERCEPTO
+- Valor: 3.6173 en escala log, unos $36.24.
+- Es el monto típico estimado para el caso de referencia (categoria='entertainment', genero='F', estado='AK', hora='0', dia_semana='domingo') con las variables numéricas en su promedio.
+
+COEFICIENTES
+Como el objetivo es un logaritmo, cada coeficiente se lee como un cambio porcentual: efecto_% = (exp(coeficiente) - 1) * 100.
+
+Numéricas (escaladas): efecto de aumentar una desviación estándar.
+     variable               lectura  coeficiente  efecto_%
+         edad +1 desviación (17.36)      -0.0729   -7.0304
+ distancia_km +1 desviación (29.09)      -0.0019   -0.1894
+log_poblacion  +1 desviación (2.45)      -0.0288   -2.8360
+
+Categóricas: efecto frente a la categoría de referencia.
+* categoria (referencia: 'entertainment')
+         valor  coeficiente  efecto_%
+   grocery_pos       0.8932  144.2814
+ gas_transport       0.3656   44.1418
+   grocery_net       0.0919    9.6216
+     kids_pets       0.0843    8.7921
+          home       0.0713    7.3853
+health_fitness      -0.0539   -5.2453
+   food_dining      -0.2088  -18.8413
+ personal_care      -0.2527  -22.3335
+      misc_net      -0.6806  -49.3666
+      misc_pos      -0.7355  -52.0713
+  shopping_net      -0.7949  -54.8389
+  shopping_pos      -0.8979  -59.2594
+        travel      -1.2055  -70.0466
+
+* genero (referencia: 'F')
+valor  coeficiente  efecto_%
+    M       0.0784    8.1534
+
+* estado (referencia: 'AK')
+valor  coeficiente  efecto_%
+   DE       2.4005 1002.8932
+   VT       0.3444   41.1205
+   CO       0.2830   32.7105
+   NC       0.2622   29.9770
+   DC       0.2467   27.9737
+   LA       0.2213   24.7747
+   NH       0.2131   23.7485
+   PA       0.2089   23.2335
+   AZ       0.2079   23.1042
+   ID       0.1900   20.9287
+   AR       0.1844   20.2517
+   WY       0.1805   19.7764
+   TN       0.1801   19.7314
+   CA       0.1709   18.6333
+   SD       0.1651   17.9489
+   MT       0.1596   17.2987
+   GA       0.1550   16.7629
+   OH       0.1520   16.4154
+   OR       0.1465   15.7827
+   VA       0.1451   15.6111
+   FL       0.1437   15.4520
+   WA       0.1416   15.2156
+   WI       0.1270   13.5463
+   MI       0.1236   13.1527
+   TX       0.1162   12.3188
+   NY       0.1118   11.8316
+   IL       0.1069   11.2824
+   KY       0.0975   10.2436
+   MN       0.0899    9.4078
+   MO       0.0790    8.2175
+   KS       0.0786    8.1760
+   IN       0.0771    8.0130
+   WV       0.0690    7.1445
+   ND       0.0518    5.3184
+   OK       0.0382    3.8947
+   MS       0.0357    3.6321
+   NJ       0.0298    3.0230
+   NE       0.0129    1.3014
+   IA       0.0118    1.1910
+   AL       0.0024    0.2357
+   SC      -0.0157   -1.5534
+   CT      -0.0376   -3.6857
+   ME      -0.0412   -4.0322
+   MD      -0.0443   -4.3355
+   MA      -0.0883   -8.4513
+   UT      -0.0985   -9.3762
+   NV      -0.1682  -15.4792
+   NM      -0.1718  -15.7855
+   HI      -0.1912  -17.4046
+   RI      -0.2804  -24.4503
+
+* hora (referencia: '0')
+valor  coeficiente  efecto_%
+    2       0.0258    2.6106
+    1       0.0196    1.9780
+    7       0.0184    1.8612
+    5       0.0180    1.8149
+    9       0.0102    1.0217
+    8       0.0060    0.6058
+    3       0.0056    0.5638
+   11       0.0047    0.4680
+    4       0.0004    0.0362
+    6      -0.0040   -0.4028
+   10      -0.0225   -2.2220
+   23      -0.0899   -8.5986
+   22      -0.0963   -9.1796
+   15      -0.1473  -13.6993
+   21      -0.1477  -13.7280
+   20      -0.1493  -13.8690
+   13      -0.1598  -14.7666
+   18      -0.1696  -15.5986
+   14      -0.1759  -16.1257
+   16      -0.1786  -16.3544
+   19      -0.1794  -16.4247
+   17      -0.1807  -16.5303
+   12      -0.1928  -17.5352
+
+* dia_semana (referencia: 'domingo')
+    valor  coeficiente  efecto_%
+miercoles       0.0232    2.3521
+  viernes       0.0220    2.2281
+   sabado       0.0219    2.2104
+   jueves       0.0199    2.0141
+    lunes       0.0186    1.8779
+   martes       0.0082    0.8193
+
+INTERPRETACIÓN (calculada con esta ejecución)
+- El modelo explica el 20.1 % de la variación del monto (en escala logarítmica). Es un nivel bajo.
+- En dólares, se equivoca en promedio por $46.92, frente a $55.05 de la línea base que siempre predice el promedio: 14.8 % menos error.
+- La variable con el efecto individual más grande es 'estado' (hasta 1002.9 %), seguida de 'categoria' (hasta 144.3 %).
+- Por categoría de comercio, el monto esperado más alto es en 'grocery_pos' (+144.3 %) y el más bajo en 'travel' (-70.0 %), comparados con 'entertainment'.
+- El RMSE en dólares ($153.87) es 3.3 veces el MAE: unas pocas compras muy grandes generan errores enormes que el modelo no anticipa.
+
+LIMITACIONES
+- El monto depende sobre todo de qué se compra, y ese dato no está en el dataset.
+- Un modelo lineal suma efectos: no capta combinaciones (por ejemplo, que la hora importe distinto en cada tipo de comercio).
+- Al usar logaritmo, el modelo estima un monto típico (más cerca de la mediana que del promedio), así que tiende a quedarse corto en las compras grandes.
+- Los efectos son asociaciones, no causas.

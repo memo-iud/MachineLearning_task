@@ -1,6 +1,6 @@
 EA2 - COMPONENTE 0: DATAFRAME CONSTRUIDO DESDE HUGGING FACE
 ======================================================================
-Fecha de ejecución: 2026-10-24T02:01:11
+Fecha de ejecución: 2026-10-24T16:13:27
 Dataset: pointe77/credit-card-transaction
 Enlace: https://huggingface.co/datasets/pointe77/credit-card-transaction
 Split: train
