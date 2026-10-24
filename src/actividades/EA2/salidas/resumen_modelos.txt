@@ -1,0 +1,103 @@
+======================================================================
+RESUMEN DE MODELOS - EA2 MACHINE LEARNING
+======================================================================
+
+EJECUCIÓN
+----------------------------------------------------------------------
+- Fecha de ejecución: 2026-10-24 12:25:58 (hora de Bogotá) / 2026-10-24 17:25:58 UTC
+- Entorno: Python 3.12.15, scikit-learn 1.9.1
+- Ejecutado por: GitHub Actions
+- Ejecución: https://github.com/memo-iud/MachineLearning_task/actions/runs/40115919056
+- Commit: be22f59
+
+DATASET
+----------------------------------------------------------------------
+- Identificador: pointe77/credit-card-transaction
+- Enlace: https://huggingface.co/datasets/pointe77/credit-card-transaction
+- Split: train
+- Contenido: transacciones de tarjeta de crédito simuladas, con datos del comercio, del cliente, ubicación y la marca de fraude.
+
+PREPROCESAMIENTO
+----------------------------------------------------------------------
+- Antes: 1,296,675 filas, 24 columnas, 195,973 nulos.
+- Después: 300,000 filas, 11 columnas, 0 nulos.
+- Operaciones, en orden:
+  1. Muestreo estratificado: 1,296,675 -> 300,000 filas; fraude 0.579 % -> 0.579 % (semilla 42).
+  2. Selección de variables (eliminar columnas): 12 columnas eliminadas (Unnamed: 0, cc_num, first, last, street, trans_num, unix_time, zip, merchant, city, job, merch_zipcode); con ellas se van 45,462 valores nulos.
+  3. Renombrar columnas al español: 12 columnas renombradas.
+  4. Eliminar duplicados: 0 filas duplicadas eliminadas.
+  5. Corrección de tipos: 'fecha_hora_transaccion' y 'fecha_nacimiento' pasan de texto a datetime.
+  6. Enriquecimiento (variables nuevas): Nuevas: hora, dia_semana, edad, distancia_km, log_poblacion, log_monto.
+  7. Quitar columnas ya transformadas: 7 columnas eliminadas (fecha_hora_transaccion, fecha_nacimiento, latitud, longitud, latitud_comerciante, longitud_comerciante, poblacion_ciudad).
+  8. Separación entrenamiento / prueba: entrenamiento=240,000 filas (fraude 0.579 %); prueba=60,000 filas (fraude 0.578 %).
+  9. Escalado (StandardScaler) y one-hot (OneHotEncoder con drop='first' y categorías raras agrupadas en 'otros') dentro del Pipeline de cada modelo, ajustados solo con entrenamiento.
+- Detalle completo: salidas/01_preprocesamiento.txt
+
+MODELO 1 - REGRESIÓN LINEAL
+----------------------------------------------------------------------
+- Objetivo: estimar el monto de una compra a partir del tipo de comercio, el momento, el perfil del cliente y la distancia al comercio.
+- Variable objetivo: log_monto = log(1 + monto)
+- Predictoras: edad, distancia_km, log_poblacion, categoria, genero, estado, hora, dia_semana
+- Algoritmo: LinearRegression (scikit-learn), parámetros por defecto (fit_intercept=True).
+- Entrenamiento / prueba: 240,000 / 60,000 filas (20 % prueba, semilla 42).
+- Línea base: DummyRegressor(strategy='mean').
+- Métricas en prueba:
+    R2 (log)  = 0.2006   (línea base -0.0000)
+    MAE (log) = 0.8665   (línea base 1.0751)
+    RMSE (log)= 1.1508   (línea base 1.2871)
+    MAE (USD) = $46.92  (línea base $55.05)
+    RMSE (USD)= $153.87 (línea base $154.51)
+- Intercepto: 3.6173 (log), unos $36.24.
+- Interpretación:
+  - El modelo explica el 20.1 % de la variación del monto (en escala logarítmica). Es un nivel bajo.
+  - En dólares, se equivoca en promedio por $46.92, frente a $55.05 de la línea base que siempre predice el promedio: 14.8 % menos error.
+  - La variable más importante es 'categoria': si se mezclan sus valores, el R2 baja 0.353. Le siguen 'estado' (0.009) y 'hora' (0.008).
+  - Por categoría de comercio, el monto esperado más alto es en 'grocery_pos' (+144.3 %) y el más bajo en 'travel' (-70.0 %), comparados con 'entertainment'.
+  - El RMSE en dólares ($153.87) es 3.3 veces el MAE: unas pocas compras muy grandes generan errores enormes que el modelo no anticipa.
+  - El R2 en dólares (-0.053) sale más bajo que en escala log, incluso negativo. No es una contradicción: al volver a dólares el modelo estima el monto típico de una compra, no el promedio, y el R2 en dólares lo dominan las pocas compras gigantes. Por eso el MAE en dólares es la métrica más útil para leer el error real.
+- Detalle completo (coeficientes de todas las variables): salidas/02_regresion.txt
+
+MODELO 2 - CLASIFICACIÓN (REGRESIÓN LOGÍSTICA)
+----------------------------------------------------------------------
+- Objetivo: identificar si una transacción es fraude.
+- Clases: 0 = legítima, 1 = fraude (columna 'es_fraude').
+- Predictoras: edad, distancia_km, log_poblacion, log_monto, categoria, genero, estado, hora, dia_semana
+- Algoritmo: LogisticRegression (class_weight='balanced', max_iter=1000, random_state=42; resto por defecto). Umbral de decisión: 0.5.
+- Por qué: es interpretable, entrega probabilidades y compensa el desbalance de clases.
+- Entrenamiento / prueba: misma división que la regresión (240,000 / 60,000 filas, estratificada).
+- Línea base: DummyClassifier(strategy='most_frequent').
+- Métricas en prueba:
+    Exactitud        = 0.8441  (línea base 0.9942)
+    Recall fraude    = 0.8184  (línea base 0.0000)
+    Precisión fraude = 0.0297  (línea base 0.0000)
+    F1 fraude        = 0.0572  (línea base 0.0000)
+    PR-AUC           = 0.3075  (azar 0.0058)
+    ROC-AUC          = 0.9191  (azar 0.5000)
+- Matriz de confusión:
+                   pred legitima  pred fraude
+    real legitima          50362         9291
+    real fraude               63          284
+- Interpretación:
+  - La línea base acierta el 99.42 % sin detectar ni un fraude (recall de fraude = 0.00). Por eso la exactitud no sirve para juzgar este problema.
+  - Con umbral 0.5, el modelo detecta 284 de 347 fraudes (recall 81.8 %). A cambio genera 9,291 falsas alarmas: de cada 100 alertas, 3.0 son fraude de verdad.
+  - Reconoce mejor la clase 'legitima' (F1 0.915) que la clase 'fraude' (F1 0.057). Su error más frecuente son las falsas alarmas (9,291) más que los fraudes perdidos (63).
+  - PR-AUC = 0.308 frente a 0.0058 de un modelo al azar: ordena las transacciones por riesgo 53 veces mejor que el azar.
+  - La variable más importante para detectar fraude es 'hora' (si se mezcla, el PR-AUC baja 0.284), seguida de 'log_monto' (0.276) y 'categoria' (0.128).
+  - La característica que más sube el riesgo es categoria = gas_transport (vs entertainment) (multiplica las probabilidades por 24.27).
+  - Los fraudes que se le escapan tienen un monto mediano de $19.02, frente a $761.21 de los que sí detecta: los fraudes pequeños se parecen más a compras normales.
+  - Por categoría, detecta mejor el fraude en 'misc_net' (100 %) y peor en 'grocery_net' (17 %).
+- Detalle completo (umbrales, coeficientes, errores): salidas/03_clasificacion.txt
+
+CONCLUSIONES
+----------------------------------------------------------------------
+- El mismo dataset sirvió para los dos problemas. Predecir el monto exacto es difícil (R2 = 0.20): la variable 'categoria' explica la mayor parte de lo que el modelo logra, y falta saber qué se compró.
+- El clasificador da un resultado más útil: encuentra el 82 % de los fraudes y ordena las transacciones por riesgo 53 veces mejor que el azar (PR-AUC). Su costo son las falsas alarmas (precisión 3.0 %).
+- El umbral cambia mucho el resultado. En esta ejecución, el mejor F1 de fraude (0.413) aparece con umbral 0.95: detecta 129 fraudes con 149 falsas alarmas. Elegir el umbral es una decisión de negocio (cuánto cuesta un fraude perdido frente a una alerta falsa). Esta tabla se calculó con el conjunto de prueba, así que es un análisis y no un umbral ya validado.
+- Variables más importantes (por permutación): regresión = categoria, estado, hora; clasificación = hora, log_monto, categoria. Aparecen en ambos: hora, categoria.
+
+LIMITACIONES
+- Se usó una muestra de 300,000 de las 1,296,675 filas del dataset (estratificada), no el total.
+- Ambos modelos son lineales: no captan combinaciones entre variables.
+- Falta información clave: qué se compró (para el monto) y el historial de cada cliente (para el fraude).
+- El dataset es simulado, así que los patrones pueden ser más limpios que los reales.
+- Los coeficientes muestran asociaciones, no causas.
