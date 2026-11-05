@@ -1,0 +1,149 @@
+EA3 - COMPONENTE 0: PREGUNTA DE NEGOCIO Y DATAFRAME
+======================================================================
+Fecha de ejecución: 2026-11-04 20:06:59 (hora de Bogotá)
+
+PREGUNTA DE NEGOCIO
+¿Qué transacciones con tarjeta tienen mayor riesgo de ser fraude, para que el equipo de prevención de fraude decida cuáles bloquear o revisar primero, si solo puede revisar un número limitado de alertas al día?
+- Quién la necesita: El equipo de prevención de fraude del banco: los analistas que revisan las alertas y deciden si una transacción se bloquea o se deja pasar.
+- Qué decisión apoya: Qué transacciones mandar a revisión o bloquear, y desde qué nivel de riesgo hacerlo, según cuántas alertas alcanza a revisar el equipo en un día.
+- Tipo de aprendizaje: Supervisado (clasificación). Queremos predecir una variable que ya conocemos en los datos históricos: si la transacción fue fraude o no.
+
+DATASET
+- Identificador: pointe77/credit-card-transaction
+- Enlace: https://huggingface.co/datasets/pointe77/credit-card-transaction
+- Split: train
+- Contenido: transacciones de tarjeta de crédito simuladas de clientes en Estados Unidos, con la fecha y hora, el comercio y su categoría, el monto, datos del cliente, su ubicación y la del comercio, y la marca de fraude.
+
+POR QUÉ ESTE DATASET RESPONDE LA PREGUNTA
+- Trae la respuesta histórica: la columna 'is_fraud' dice si cada transacción fue fraude (7,506 de 1,296,675, un 0.579 %). Con eso podemos entrenar un modelo supervisado.
+- Tiene el historial de cada tarjeta: 983 tarjetas distintas con muchas compras cada una, así que podemos medir si una compra se sale de lo normal para ese cliente.
+- Cubre un periodo largo (2019-01-01 a 2020-06-21), lo que nos deja entrenar con meses antiguos y probar con los más recientes, como pasaría en el banco.
+- El fraude es poco frecuente pero caro: es el 0.58 % de las transacciones y el 4.4 % del dinero ($3,988,089). Una compra fraudulenta tiene un monto mediano de $396.50 contra $47.28 de una legítima.
+- La hora importa: las horas con más fraude son 22h (2.88 %), 23h (2.84 %), 1h (1.53 %), 0h (1.49 %). Por eso tiene sentido que el equipo priorice alertas y no las revise todas igual.
+
+REPORTE DEL DATAFRAME
+============================================================
+Filas: 1296675
+Columnas: 24
+Duplicados: 0
+
+Columnas y tipos:
+- Unnamed: 0: int64
+- trans_date_trans_time: object
+- cc_num: int64
+- merchant: object
+- category: object
+- amt: float64
+- first: object
+- last: object
+- gender: object
+- street: object
+- city: object
+- state: object
+- zip: int64
+- lat: float64
+- long: float64
+- city_pop: int64
+- job: object
+- dob: object
+- trans_num: object
+- unix_time: int64
+- merch_lat: float64
+- merch_long: float64
+- is_fraud: int64
+- merch_zipcode: float64
+
+Valores nulos por columna:
+- Unnamed: 0: 0
+- trans_date_trans_time: 0
+- cc_num: 0
+- merchant: 0
+- category: 0
+- amt: 0
+- first: 0
+- last: 0
+- gender: 0
+- street: 0
+- city: 0
+- state: 0
+- zip: 0
+- lat: 0
+- long: 0
+- city_pop: 0
+- job: 0
+- dob: 0
+- trans_num: 0
+- unix_time: 0
+- merch_lat: 0
+- merch_long: 0
+- is_fraud: 0
+- merch_zipcode: 195973
+
+Estadísticas numéricas:
+        Unnamed: 0        cc_num          amt          zip          lat         long     city_pop     unix_time    merch_lat   merch_long     is_fraud  merch_zipcode
+count  1296675.000  1.296675e+06  1296675.000  1296675.000  1296675.000  1296675.000  1296675.000  1.296675e+06  1296675.000  1296675.000  1296675.000    1100702.000
+mean    648337.000  4.171920e+17       70.351    48800.671       38.538      -90.226    88824.441  1.349244e+09       38.537      -90.226        0.006      46825.754
+std     374317.974  1.308806e+18      160.316    26893.222        5.076       13.759   301956.361  1.284128e+07        5.110       13.771        0.076      25834.001
+min          0.000  6.041621e+10        1.000     1257.000       20.027     -165.672       23.000  1.325376e+09       19.028     -166.671        0.000       1001.000
+25%     324168.500  1.800429e+14        9.650    26237.000       34.620      -96.798      743.000  1.338751e+09       34.734      -96.897        0.000      25114.000
+50%     648337.000  3.521417e+15       47.520    48174.000       39.354      -87.477     2456.000  1.349250e+09       39.366      -87.438        0.000      45860.000
+75%     972505.500  4.642255e+15       83.140    72042.000       41.940      -80.158    20328.000  1.359385e+09       41.957      -80.237        0.000      68319.000
+max    1296674.000  4.992346e+18    28948.900    99783.000       66.693      -67.950  2906700.000  1.371817e+09       67.510      -66.951        1.000      99403.000
+
+Muestra del contenido (5 filas):
+   Unnamed: 0 trans_date_trans_time            cc_num                            merchant       category     amt      first     last gender                        street            city state    zip      lat      long  city_pop                                job         dob                         trans_num   unix_time  merch_lat  merch_long  is_fraud  merch_zipcode
+0           0   2019-01-01 00:00:18  2703186189652095          fraud_Rippin, Kub and Mann       misc_net    4.97   Jennifer    Banks      F                561 Perry Cove  Moravian Falls    NC  28654  36.0788  -81.1781      3495          Psychologist, counselling  1988-03-09  0b242abb623afc578575680df30655b9  1325376018  36.011293  -82.048315         0        28705.0
+1           1   2019-01-01 00:00:44      630423337322     fraud_Heller, Gutmann and Zieme    grocery_pos  107.23  Stephanie     Gill      F  43039 Riley Greens Suite 393          Orient    WA  99160  48.8878 -118.2105       149  Special educational needs teacher  1978-06-21  1f76529f8574734946361c461b024d99  1325376044  49.159047 -118.186462         0            NaN
+2           2   2019-01-01 00:00:51    38859492057661                fraud_Lind-Buckridge  entertainment  220.11     Edward  Sanchez      M      594 White Dale Suite 530      Malad City    ID  83252  42.1808 -112.2620      4154        Nature conservation officer  1962-01-19  a1a22d70485983eac12b5b88dad1cf95  1325376051  43.150704 -112.154481         0        83236.0
+3           3   2019-01-01 00:01:16  3534093764340240  fraud_Kutch, Hermiston and Farrell  gas_transport   45.00     Jeremy    White      M   9443 Cynthia Court Apt. 038         Boulder    MT  59632  46.2306 -112.1138      1939                    Patent attorney  1967-01-12  6b849c168bdad6f867558c3793159a81  1325376076  47.034331 -112.561071         0            NaN
+4           4   2019-01-01 00:03:06   375534208663984                 fraud_Keeling-Crist       misc_pos   41.96      Tyler   Garcia      M              408 Bradley Rest        Doe Hill    VA  24433  38.4207  -79.4629        99     Dance movement psychotherapist  1986-03-28  a41d7549acf90789359a9aa5346dcb46  1325376186  38.674999  -78.632459         0        22844.0
+
+Transacciones y fraudes por mes:
+         transacciones  fraudes  tasa_%
+mes                                    
+2019-01          52525      506   0.963
+2019-02          49866      517   1.037
+2019-03          70939      494   0.696
+2019-04          68078      376   0.552
+2019-05          72532      408   0.563
+2019-06          86064      354   0.411
+2019-07          86596      331   0.382
+2019-08          87359      382   0.437
+2019-09          70652      418   0.592
+2019-10          68758      454   0.660
+2019-11          70421      388   0.551
+2019-12         141060      592   0.420
+2020-01          52202      343   0.657
+2020-02          47791      336   0.703
+2020-03          72850      444   0.609
+2020-04          66892      302   0.451
+2020-05          74343      527   0.709
+2020-06          57747      334   0.578
+
+Tasa de fraude por hora del día:
+      transacciones  fraudes  tasa_%
+hora                                
+0             42502      635   1.494
+1             42869      658   1.535
+2             42656      625   1.465
+3             42769      609   1.424
+4             41863       46   0.110
+5             42171       60   0.142
+6             42300       40   0.095
+7             42203       56   0.133
+8             42505       49   0.115
+9             42185       47   0.111
+10            42271       40   0.095
+11            42082       42   0.100
+12            65257       67   0.103
+13            65314       80   0.122
+14            64885       86   0.133
+15            65391       79   0.121
+16            65726       76   0.116
+17            65450       78   0.119
+18            66051       81   0.123
+19            65508       81   0.124
+20            65098       62   0.095
+21            65533       74   0.113
+22            66982     1931   2.883
+23            67104     1904   2.837
