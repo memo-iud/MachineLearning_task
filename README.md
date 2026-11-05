@@ -25,6 +25,7 @@ El dataset es exclusivo de nuestro grupo.
 .github/workflows/
   ea1.yml                  Ejecuta la actividad 1
   ea2.yml                  Ejecuta la actividad 2
+  ea3.yml                  Ejecuta la actividad 3
 src/
   clases_po/               Clases compartidas por todas las actividades
     hf_loader.py           HFDatasetLoader: carga un dataset de Hugging Face como DataFrame
@@ -36,6 +37,12 @@ src/
     EA2/
       main.py              Flujo completo de la actividad 2
       salidas/             Archivos .txt generados por el workflow
+    EA3/
+      main.py              Flujo completo de la actividad 3
+      pregunta.py          Pregunta de negocio y datos del dataset
+      componentes/         Cada paso del flujo (exploración, preprocesamiento, modelo...)
+      salidas/             Archivos .txt generados por el workflow
+      graficas/            Gráficas .png generadas por el workflow
 requirements.txt
 ```
 
@@ -214,6 +221,34 @@ El workflow [`ea2.yml`](.github/workflows/ea2.yml) se activa solo con cada `push
 - [x] Control de versiones e instrucciones de ejecución.
 - [ ] Acceso para el docente (si el repositorio es privado) y enlaces subidos a Canvas.
 
+## Actividad 3 — Random Forest para priorizar alertas de fraude
+
+> En construcción: fase 0 lista (pregunta de negocio y DataFrame).
+
+### Pregunta de negocio
+
+**¿Qué transacciones con tarjeta tienen mayor riesgo de ser fraude, para que el equipo de prevención de fraude decida cuáles bloquear o revisar primero, si solo puede revisar un número limitado de alertas al día?**
+
+- **Quién la necesita:** el equipo de prevención de fraude del banco, que son las personas que revisan las alertas y deciden si una transacción se bloquea o se deja pasar.
+- **Qué decisión apoya:** qué transacciones mandar a revisión o bloquear, y desde qué nivel de riesgo hacerlo, según cuántas alertas alcanzan a revisar en un día.
+- **Tipo de aprendizaje:** supervisado (clasificación). En los datos históricos ya sabemos qué transacciones fueron fraude, así que el modelo aprende de esos ejemplos para calificar las transacciones nuevas.
+
+### Por qué este dataset
+
+Seguimos con [`pointe77/credit-card-transaction`](https://huggingface.co/datasets/pointe77/credit-card-transaction) (split `train`), el mismo de la EA1 y la EA2, que es exclusivo de nuestro grupo. Para esta pregunta encaja muy bien por cuatro razones:
+
+- Trae la respuesta histórica en la columna `is_fraud`.
+- Tiene el historial de cada tarjeta, así que podemos medir si una compra se sale de lo normal para ese cliente.
+- Cubre año y medio de transacciones, lo que nos deja entrenar con los meses antiguos y probar con los más recientes, como pasaría en el banco.
+- El fraude es poco frecuente pero caro, y por eso tiene sentido priorizar.
+
+| Evidencia | Archivo generado |
+|---|---|
+| 0. Pregunta, justificación del dataset y DataFrame | `src/actividades/EA3/salidas/00_dataframe.txt` |
+| 0. Exploración: fraude por hora, montos y fraudes por mes | `src/actividades/EA3/graficas/00_exploracion.png` |
+
+![Exploración inicial](src/actividades/EA3/graficas/00_exploracion.png)
+
 ## Ejecución local
 
 ```bash
@@ -228,6 +263,10 @@ jupyter nbconvert --to notebook --execute --inplace EA1.ipynb
 
 # Actividad 2
 cd ../EA2
+python main.py
+
+# Actividad 3
+cd ../EA3
 python main.py
 ```
 
