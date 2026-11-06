@@ -245,14 +245,20 @@ class ModeloFraudeRF:
         tabla = self.busqueda.copy()
         tabla["prof"] = tabla["max_depth"].astype(str)
         orden = [str(v) if v is not None else "sin límite" for v in BUSQUEDA["max_depth"]]
+        # Dibujamos con posiciones numéricas (0, 1, 2...) y luego ponemos las etiquetas.
+        # Con NumPy 2.5, matplotlib 3.9 falla si se anota sobre un eje de texto.
+        x = np.arange(len(orden))
         fig, ejes = plt.subplots(1, 3, figsize=(19, 4.8), gridspec_kw={"width_ratios": [1.2, 1.2, 1]})
         for eje, peso, titulo in ((ejes[0], "ninguno", "Sin peso extra al fraude"),
                                   (ejes[1], "balanced_subsample", "Con class_weight='balanced_subsample'")):
             sub = tabla[tabla["class_weight"] == peso]
             for hoja, color in zip(BUSQUEDA["min_samples_leaf"], ["#4C78A8", "#F58518", "#54A24B"]):
                 s = sub[sub["min_samples_leaf"] == hoja].set_index("prof").reindex(orden)
-                eje.plot(orden, s["pr_auc_validacion"], "o-", color=color, label=f"validación, hoja ≥ {hoja}")
-                eje.plot(orden, s["pr_auc_train"], ":", color=color, alpha=.7, label=f"entrenamiento, hoja ≥ {hoja}")
+                eje.plot(x, s["pr_auc_validacion"].to_numpy(float), "o-", color=color,
+                         label=f"validación, hoja ≥ {hoja}")
+                eje.plot(x, s["pr_auc_train"].to_numpy(float), ":", color=color, alpha=.7,
+                         label=f"entrenamiento, hoja ≥ {hoja}")
+            eje.set_xticks(x, orden)
             eje.set_title(titulo)
             eje.set_xlabel("max_depth (profundidad de cada árbol)")
             eje.set_ylabel("PR-AUC")
@@ -260,7 +266,7 @@ class ModeloFraudeRF:
             eje.legend(fontsize=7, loc="lower right")
         mejor = self.fila_elegida
         ejes[0 if mejor["class_weight"] == "ninguno" else 1].annotate(
-            "elegido", (str(mejor["max_depth"]), mejor["pr_auc_validacion"]),
+            "elegido", (orden.index(str(mejor["max_depth"])), float(mejor["pr_auc_validacion"])),
             xytext=(0, -28), textcoords="offset points", ha="center",
             arrowprops={"arrowstyle": "->"}, fontsize=9)
         ejes[2].plot(self.curva["arboles"], self.curva["pr_auc_validacion"], "o-", color="#E45756")
