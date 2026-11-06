@@ -1,6 +1,6 @@
 EA3 - COMPONENTE 0: PREGUNTA DE NEGOCIO Y DATAFRAME
 ======================================================================
-Fecha de ejecución: 2026-11-04 20:06:59 (hora de Bogotá)
+Fecha de ejecución: 2026-11-05 19:40:53 (hora de Bogotá)
 
 PREGUNTA DE NEGOCIO
 ¿Qué transacciones con tarjeta tienen mayor riesgo de ser fraude, para que el equipo de prevención de fraude decida cuáles bloquear o revisar primero, si solo puede revisar un número limitado de alertas al día?

@@ -1,0 +1,122 @@
+EA3 - COMPONENTE 1: PREPROCESAMIENTO
+======================================================================
+
+ANTES Y DESPUÉS (todo el dataset, antes de dividir)
+               antes (crudo)  después
+filas                1296675  1296675
+columnas                  24       15
+valores nulos         195973        0
+
+Tipos antes:
+- Unnamed: 0: int64
+- trans_date_trans_time: object
+- cc_num: int64
+- merchant: object
+- category: object
+- amt: float64
+- first: object
+- last: object
+- gender: object
+- street: object
+- city: object
+- state: object
+- zip: int64
+- lat: float64
+- long: float64
+- city_pop: int64
+- job: object
+- dob: object
+- trans_num: object
+- unix_time: int64
+- merch_lat: float64
+- merch_long: float64
+- is_fraud: int64
+- merch_zipcode: float64
+
+Tipos después:
+- fecha: datetime64[ns]
+- tarjeta: int64
+- categoria: object
+- monto: float64
+- genero: object
+- poblacion_ciudad: int64
+- es_fraude: int64
+- hora: int32
+- dia_semana: int32
+- edad: int64
+- distancia_km: float64
+- veces_monto_habitual: float64
+- compras_24h: float64
+- monto_24h: float64
+- horas_desde_anterior: float64
+
+OPERACIONES (en orden)
+1. Selección de columnas
+   Por qué: Quitamos datos personales, identificadores, columnas repetidas y columnas con cientos de categorías. 'cc_num' se queda solo para agrupar el historial de cada tarjeta; no entra al modelo.
+   Efecto: 12 columnas fuera (Unnamed: 0, first, last, street, trans_num, unix_time, zip, city, state, job, merchant, merch_zipcode); con ellas se van 195,973 nulos. Quedan 12 columnas renombradas al español.
+2. Duplicados y tipos
+   Por qué: Una fila repetida contaría doble. Las fechas llegan como texto y hay que convertirlas para poder calcular horas, edades e historial.
+   Efecto: 0 filas duplicadas eliminadas; 'fecha' y 'fecha_nacimiento' pasan de texto a fecha.
+3. Variables del momento y del cliente
+   Por qué: La hora es la señal más clara de la exploración (22 y 23 h). También calculamos el día de la semana, la edad exacta y la distancia entre cliente y comercio. Dejamos la hora y el día como números porque el árbol puede cortarlos en rangos (por ejemplo, 'hora >= 22').
+   Efecto: Nuevas: hora, dia_semana, edad, distancia_km.
+4. Historial de cada tarjeta
+   Por qué: Un fraude suele verse raro para ESE cliente: una compra mucho más grande de lo normal o varias compras seguidas. Cada variable usa solo compras anteriores de la misma tarjeta. La primera compra de cada tarjeta no tiene historial, así que toma valores fijos (1 vez su monto, 0 compras, 720 horas). Es una regla, no algo que se aprenda de los datos, así que no filtra información de prueba.
+   Efecto: Nuevas: veces_monto_habitual, compras_24h, monto_24h, horas_desde_anterior.
+5. Quitar columnas ya transformadas
+   Por qué: Sus versiones nuevas (edad y distancia) ya tienen la información útil.
+   Efecto: 5 columnas eliminadas (fecha_nacimiento, latitud, longitud, latitud_comerciante, longitud_comerciante).
+6. Prueba de fuga de información
+   Por qué: Recalculamos el historial borrando los meses de prueba. Si algo mirara hacia el futuro, los valores anteriores cambiarían.
+   Efecto: 1,024,843 filas comparadas; diferencia máxima = 0.00e+00 -> SIN fuga.
+7. División temporal
+   Por qué: En el banco el modelo se entrena con lo que ya pasó y se usa con lo que viene. Por eso dividimos por fechas y no al azar. La validación sirve para elegir parámetros y umbral sin tocar la prueba.
+   Efecto: entrenamiento < 2019-12-01 (783,790 filas); validación hasta 2020-03-01 (241,053); prueba desde 2020-03-01 (271,832).
+8. Submuestreo de legítimas en entrenamiento
+   Por qué: Hay cerca de 170 legítimas por cada fraude. Quedarnos con todos los fraudes y con el 10% de las legítimas hace que el modelo vea más ejemplos de fraude en proporción y que entrene mucho más rápido en GitHub Actions. Validación y prueba NO se tocan: conservan la proporción real, que es contra la que hay que medir. El historial se calculó antes, con todas las compras, así que este recorte no lo afecta.
+   Efecto: 783,790 -> 82,544 filas; fraude 0.590% -> 5.607% (semilla 42).
+9. Prueba: ¿hace falta escalar?
+   Por qué: Entrenamos el mismo árbol de profundidad 6 con y sin StandardScaler y comparamos sus probabilidades en validación.
+   Efecto: coinciden en el 100.00 % de las transacciones; ROC-AUC 0.9722 sin escalar vs 0.9722 con escalado. Conclusión: no escalamos.
+
+Columnas descartadas y motivo:
+- Unnamed: 0: es solo un índice del archivo original.
+- first: nombre del cliente: dato personal que no ayuda a predecir.
+- last: apellido del cliente: dato personal que no ayuda a predecir.
+- street: dirección del cliente: dato personal; la ubicación ya está en latitud y longitud.
+- trans_num: código único de cada transacción, no se repite y no enseña nada.
+- unix_time: repite la fecha y hora en otro formato.
+- zip: código postal: la ubicación ya está en latitud y longitud.
+- city: ciudad: cientos de valores distintos; usamos la población de la ciudad.
+- state: estado: en la EA2 casi no aportó y tiene 50 categorías.
+- job: profesión: cerca de 500 valores distintos.
+- merchant: nombre del comercio: cerca de 700 valores; usamos la categoría.
+- merch_zipcode: 15 % de nulos y repite la ubicación del comercio.
+
+CONJUNTOS DE DATOS
+                                    desde       hasta   filas fraudes tasa_%
+entrenamiento (completo)       2019-01-01  2019-11-30  783790    4628   0.59
+entrenamiento (submuestreado)  2019-01-01  2019-11-30   82544    4628  5.607
+validación                     2019-12-01  2020-02-28  241053    1271  0.527
+prueba                         2020-03-01  2020-06-21  271832    1607  0.591
+
+¿LAS VARIABLES DE HISTORIAL SEPARAN FRAUDE DE LEGÍTIMA? (entrenamiento completo)
+                      mediana legítima  mediana fraude
+veces_monto_habitual              1.19           10.57
+compras_24h                       3.00            4.00
+monto_24h                       160.94         1678.68
+horas_desde_anterior              4.88            1.41
+
+VARIABLES QUE USARÁ EL MODELO
+- Numéricas (sin escalar): monto, hora, dia_semana, edad, distancia_km, poblacion_ciudad, veces_monto_habitual, compras_24h, monto_24h, horas_desde_anterior
+- Categóricas (one-hot, aprendido solo con entrenamiento): categoria, genero
+- Objetivo: es_fraude (0 = legítima, 1 = fraude)
+- 'tarjeta' y 'fecha' se conservan para agrupar y analizar, pero no entran al modelo.
+
+Muestra del entrenamiento después del preprocesamiento (5 filas):
+                fecha   monto  hora  dia_semana  edad  distancia_km  poblacion_ciudad  veces_monto_habitual  compras_24h  monto_24h  horas_desde_anterior     categoria genero  es_fraude
+0 2019-01-01 00:05:18    4.27     0           1    77     25.270494              1472                   1.0          0.0        0.0                 720.0      misc_pos      F          0
+1 2019-01-01 00:06:56   71.22     0           1    29     44.561080            341043                   1.0          0.0        0.0                 720.0   grocery_pos      M          0
+2 2019-01-01 00:09:20    3.26     0           1    53     97.930653              4664                   1.0          0.0        0.0                 720.0  shopping_net      M          0
+3 2019-01-01 00:10:49  327.00     0           1    66     87.348748              1078                   1.0          0.0        0.0                 720.0      misc_net      F          0
+4 2019-01-01 00:18:06   22.95     0           1    72     79.583584             95015                   1.0          0.0        0.0                 720.0  shopping_pos      M          0
