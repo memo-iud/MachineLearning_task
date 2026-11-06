@@ -1,0 +1,117 @@
+EA3 - COMPONENTE 3: EVALUACIÓN EN PRUEBA (mar-jun 2020)
+======================================================================
+
+Transacciones de prueba: 271,832 en 113 días; fraudes: 1,607 (0.591%).
+Umbral usado: 0.6796 (elegido en validación).
+
+POR QUÉ ESTAS MÉTRICAS
+- Exactitud: la mostramos, pero engaña: casi todo es legítimo.
+- Recall: de los fraudes reales, cuántos alertamos. Un fraude que se escapa es plata perdida.
+- Precisión: de las alertas, cuántas son fraude. Cada falsa alarma es tiempo de un analista y un cliente molesto porque le bloquean la tarjeta.
+- F1: equilibrio entre las dos.
+- PR-AUC: qué tan bien ordena la lista de alertas, sin depender del umbral. Es la que mejor responde la pregunta, porque el equipo revisa de arriba hacia abajo.
+- Dinero detectado: qué parte del dinero en fraude cae en las alertas.
+
+RESULTADOS
+                                exactitud  precision  recall      f1  pr_auc  roc_auc  alertas  alertas_por_dia  fraudes_detectados  dinero_fraude_detectado_%
+bosque (umbral elegido)            0.9991     0.9427  0.9004  0.9211  0.9644   0.9989   1535.0          13.5841              1447.0                    95.2311
+bosque (umbral 0.5)                0.9986     0.8299  0.9502  0.8860     NaN      NaN   1840.0          16.2832              1527.0                    98.6223
+siempre legítima                   0.9941     0.0000  0.0000  0.0000  0.0059      NaN      0.0           0.0000                 0.0                     0.0000
+regla: las compras más grandes     0.9927     0.3785  0.3615  0.3698  0.1891      NaN   1535.0          13.5841               581.0                    65.5302
+
+MATRIZ DE CONFUSIÓN (umbral elegido)
+               sin alerta  con alerta
+real legítima      270137          88
+real fraude           160        1447
+- Fraude con alerta: fraudes que el equipo alcanza a frenar.
+- Fraude sin alerta: el error más caro, el dinero se pierde.
+- Legítima con alerta: falsa alarma, cuesta tiempo y molesta al cliente.
+
+SI EL EQUIPO SOLO PUEDE REVISAR K ALERTAS AL DÍA
+(el umbral de cada fila se fija en validación y se aplica a prueba)
+ capacidad_dia  umbral  alertas_dia_prueba  fraudes_detectados_%  dinero_detectado_%  alertas_que_son_fraude_%
+             5  0.9800              4.8319               33.9141             45.5168                   99.8168
+            10  0.8885             10.2655               71.5619             81.1042                   99.1379
+            25  0.3094             22.1239               96.8264             99.5701                   62.2400
+            50  0.1400             39.4336               98.4443             99.8076                   35.5027
+           100  0.0600             74.5044               99.3777             99.9286                   18.9690
+           200  0.0253            142.7257               99.6889             99.9691                    9.9330
+
+IMPORTANCIA DE LAS VARIABLES
+Por permutación en una muestra de prueba (60,000 filas): cuánto baja el PR-AUC si se mezclan al azar los valores de cada variable.
+monto                   0.8827
+categoria               0.6120
+monto_24h               0.2681
+hora                    0.1118
+veces_monto_habitual    0.0259
+compras_24h             0.0184
+edad                    0.0142
+horas_desde_anterior    0.0126
+genero                  0.0044
+poblacion_ciudad        0.0032
+distancia_km            0.0019
+dia_semana              0.0005
+
+Importancia interna del bosque (reducción de Gini; las columnas one-hot se suman):
+monto                   0.3211
+monto_24h               0.2508
+veces_monto_habitual    0.1752
+hora                    0.0840
+categoria               0.0827
+horas_desde_anterior    0.0342
+compras_24h             0.0161
+edad                    0.0124
+poblacion_ciudad        0.0093
+distancia_km            0.0066
+dia_semana              0.0040
+genero                  0.0035
+
+ANÁLISIS DE ERRORES
+                      casos  monto_mediano  veces_monto_habitual  hora_mediana  prob_mediana
+tipo                                                                                        
+fraude detectado       1447        627.950                11.124          22.0         0.969
+fraude perdido          160         37.015                 0.935          19.0         0.501
+falsa alarma             88        735.340                18.238          19.0         0.750
+legítima sin alerta  270137         47.570                 1.209          14.0         0.000
+
+Fraudes por categoría de comercio:
+                fraudes  detectados    dinero  recall_pct
+categoria                                                
+grocery_pos         375         374  117541.9        99.7
+shopping_net        360         350  358890.4        97.2
+shopping_pos        188         176  164179.4        93.6
+misc_net            186         177  148446.6        95.2
+gas_transport       127         124    1538.2        97.6
+misc_pos             60          42   18850.9        70.0
+personal_care        52          35    1295.1        67.3
+kids_pets            51          32     954.5        62.7
+entertainment        50          44   24367.3        88.0
+home                 49          38   12584.7        77.6
+food_dining          33           9    3993.9        27.3
+health_fitness       30          16     601.7        53.3
+grocery_net          27          17     293.4        63.0
+travel               19          13     182.3        68.4
+
+Resultado por mes (¿el modelo se mantiene en el tiempo?):
+         fraudes  recall_pct  precision_pct
+fecha                                      
+2020-03    444.0        90.8           94.4
+2020-04    302.0        88.7           91.8
+2020-05    527.0        91.1           94.1
+2020-06    334.0        88.6           96.7
+
+INTERPRETACIÓN (calculada con esta ejecución)
+- Decir siempre 'legítima' acierta el 99.41 % sin frenar un solo fraude. Por eso la exactitud no sirve para juzgar este modelo.
+- Con el umbral elegido en validación, el bosque genera 13.6 alertas al día y detecta el 90.0 % de los fraudes (1,447 de 1,607), que equivalen al 95.2 % del dinero en fraude.
+- De cada 100 alertas, 94 son fraude de verdad. El resto son falsas alarmas (88 en total).
+- Con las mismas alertas, la regla de revisar las compras más grandes detecta el 36.2 % de los fraudes (precisión 38 %), frente al 90.0 % del modelo. El modelo aporta más que una regla sencilla.
+- PR-AUC 0.964 (el azar daría 0.0059) y ROC-AUC 0.999.
+- Si el equipo solo puede revisar 50 alertas al día, detectaría el 98.4 % de los fraudes y el 99.8 % del dinero.
+- Las variables que más pesan son monto, categoria, monto_24h.
+- Los fraudes que se escapan tienen un monto mediano de $37.02, frente a $627.95 de los detectados: el modelo falla sobre todo en fraudes pequeños, que se parecen a compras normales.
+
+LIMITACIONES
+- El dataset es simulado: en la vida real el fraude cambia y el modelo habría que reentrenarlo seguido.
+- El umbral se eligió con F1, que pesa igual un fraude perdido y una falsa alarma. Si el banco sabe cuánto le cuesta cada error, se puede mover usando la tabla de capacidad.
+- El bosque es menos fácil de explicar que un solo árbol: sabemos qué variables pesan, pero no hay una sola regla simple para cada alerta.
+- Se entrenó con el 10% de las legítimas, así que las probabilidades salen más altas que la tasa real de fraude. Por eso el umbral se eligió en validación, con la proporción real.

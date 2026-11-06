@@ -1,0 +1,75 @@
+EA3 - COMPONENTE 2: MODELO (RANDOM FOREST) Y ELECCIÓN DE PARÁMETROS
+======================================================================
+
+TIPO DE APRENDIZAJE: supervisado, clasificación binaria (0 = legítima, 1 = fraude).
+Variables del modelo: monto, hora, dia_semana, edad, distancia_km, poblacion_ciudad, veces_monto_habitual, compras_24h, monto_24h, horas_desde_anterior, categoria, genero
+Después del one-hot quedan 26 columnas.
+
+CÓMO ELEGIMOS LOS PARÁMETROS
+- Probamos 30 combinaciones con 100 árboles cada una.
+- Cada combinación se entrena con el entrenamiento (ene-nov 2019) y se mide en validación (dic-2019 a feb-2020). La prueba no se toca.
+- Métrica: PR-AUC en validación. 'brecha' = PR-AUC en entrenamiento menos en validación: si es grande, el modelo memoriza en vez de aprender.
+
+Resultados (de mejor a peor):
+ max_depth  min_samples_leaf       class_weight  pr_auc_train  pr_auc_validacion  roc_auc_validacion  segundos  brecha     elegida
+        20                 1 balanced_subsample        1.0000             0.9627              0.9986    4.2461  0.0373 <-- elegida
+sin límite                 1 balanced_subsample        1.0000             0.9617              0.9983    4.2781  0.0383            
+sin límite                 1            ninguno        1.0000             0.9556              0.9985    4.3039  0.0444            
+        20                 1            ninguno        1.0000             0.9552              0.9987    4.2826  0.0448            
+        15                 1 balanced_subsample        0.9996             0.9538              0.9981    4.2567  0.0458            
+        15                 1            ninguno        0.9995             0.9505              0.9984    4.0872  0.0490            
+        20                10 balanced_subsample        0.9978             0.9486              0.9986    4.2519  0.0492            
+sin límite                10 balanced_subsample        0.9977             0.9468              0.9985    4.2672  0.0509            
+        15                10 balanced_subsample        0.9967             0.9428              0.9985    4.2837  0.0539            
+        20                10            ninguno        0.9938             0.9325              0.9981    4.1433  0.0613            
+sin límite                10            ninguno        0.9939             0.9316              0.9981    4.1656  0.0623            
+        10                 1 balanced_subsample        0.9909             0.9312              0.9978    3.8240  0.0597            
+        15                10            ninguno        0.9918             0.9266              0.9981    3.9867  0.0652            
+        10                10 balanced_subsample        0.9878             0.9241              0.9976    3.7685  0.0637            
+        10                 1            ninguno        0.9894             0.9225              0.9971    3.3866  0.0669            
+        20                50 balanced_subsample        0.9868             0.9149              0.9975    4.1468  0.0719            
+sin límite                50 balanced_subsample        0.9868             0.9135              0.9974    4.1447  0.0733            
+        10                10            ninguno        0.9832             0.9054              0.9968    3.3961  0.0778            
+        15                50 balanced_subsample        0.9852             0.9044              0.9973    4.1597  0.0809            
+        10                50 balanced_subsample        0.9800             0.8975              0.9966    3.7364  0.0825            
+        20                50            ninguno        0.9765             0.8758              0.9964    4.0529  0.1007            
+sin límite                50            ninguno        0.9765             0.8736              0.9964    4.0469  0.1029            
+        15                50            ninguno        0.9758             0.8720              0.9964    3.9155  0.1039            
+        10                50            ninguno        0.9713             0.8622              0.9957    3.2337  0.1091            
+         5                 1            ninguno        0.9380             0.8062              0.9891    2.1934  0.1318            
+         5                10            ninguno        0.9371             0.8019              0.9892    2.1738  0.1352            
+         5                10 balanced_subsample        0.9308             0.7876              0.9893    2.6705  0.1432            
+         5                50            ninguno        0.9356             0.7875              0.9889    2.1496  0.1481            
+         5                 1 balanced_subsample        0.9298             0.7812              0.9891    2.6692  0.1486            
+         5                50 balanced_subsample        0.9244             0.7658              0.9888    2.6872  0.1586            
+
+Combinaciones a menos de 0.005 del mejor PR-AUC: 2. Entre ellas elegimos la de menor brecha, porque es la que menos memoriza.
+Combinación elegida: {'max_depth': 20, 'min_samples_leaf': 1, 'class_weight': 'balanced_subsample'}
+
+¿CUÁNTOS ÁRBOLES?
+ arboles  pr_auc_validacion
+      10             0.9398
+      25             0.9576
+      50             0.9604
+     100             0.9627
+     200             0.9623
+     300             0.9635
+     400             0.9634
+Elegimos 100 árboles: es el número más pequeño que queda a menos de 0.002 del mejor PR-AUC. Más árboles casi no mejoran y tardan más.
+
+PARÁMETROS FINALES
+- n_estimators = 100: cuántos árboles tiene el bosque. Más árboles = votación más estable, pero más lento.
+- max_depth = 20: cuántas preguntas seguidas puede hacer cada árbol. Muy profundo memoriza; muy bajo se queda corto.
+- min_samples_leaf = 1: mínimo de transacciones en cada hoja. Más alto = reglas más generales.
+- class_weight = 'balanced_subsample': si es 'balanced_subsample', cada fraude pesa más al entrenar cada árbol.
+- max_features = 'sqrt' (valor por defecto): cuántas variables al azar puede mirar cada pregunta ('sqrt' = raíz cuadrada del total). Es lo que hace distintos a los árboles.
+- criterion = 'gini' (valor por defecto): cómo mide qué tan buena es una pregunta (Gini = qué tan mezcladas quedan las clases).
+- bootstrap = True (valor por defecto): cada árbol aprende con una muestra al azar, con reemplazo, de las filas.
+- random_state = 42: semilla para que el resultado se pueda repetir.
+- n_jobs = -1: usa todos los núcleos del computador (no cambia el resultado).
+- Tiempo de entrenamiento del bosque final: 3.7 s
+
+UMBRAL DE ALERTA (elegido en validación, no en prueba)
+- Umbral = 0.6796: si la probabilidad de fraude es mayor o igual, se genera alerta.
+- Es el que da el mejor F1 en validación: F1 0.924, precisión 0.949, recall 0.900.
+- PR-AUC del bosque final en validación: 0.9627
