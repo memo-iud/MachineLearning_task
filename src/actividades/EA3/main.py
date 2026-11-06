@@ -9,8 +9,8 @@ El flujo completo va así:
         -> resumen automático .txt
         -> gráficas para el documento de hallazgos
 
-Por ahora tiene los componentes 0 (pregunta + DataFrame), 1 (preprocesamiento),
-2 (modelo) y 3 (evaluación). El resumen .txt se agrega en la siguiente fase.
+Al final queda salidas/resumen_ea3.txt con todo lo de la ejecución. El documento
+de hallazgos (HALLAZGOS.md) lo escribimos nosotros a partir de estos resultados.
 
 Para correrlo en local, desde esta carpeta:
 
@@ -34,6 +34,7 @@ import pregunta as pn  # noqa: E402
 from componentes import exploracion  # noqa: E402
 from componentes.evaluacion import EvaluacionEA3  # noqa: E402
 from componentes.modelo import ModeloFraudeRF  # noqa: E402
+from componentes.resumen import ResumenEA3  # noqa: E402
 from componentes.preprocesamiento import (  # noqa: E402
     CATEGORICAS,
     NUMERICAS,
@@ -78,8 +79,9 @@ def main() -> None:
     (SALIDAS / "03_evaluacion.txt").write_text(evidencia, encoding="utf-8")
     evaluacion.graficar(GRAFICAS)
 
-    # Próxima fase:
-    # 4. resumen_ea3.txt
+    # Componente 4: resumen automático de toda la ejecución.
+    ruta = ResumenEA3(preprocesador, modelo, evaluacion).guardar(SALIDAS / "resumen_ea3.txt")
+    print(ruta.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

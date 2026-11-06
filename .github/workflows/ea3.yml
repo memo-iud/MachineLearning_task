@@ -52,6 +52,13 @@ jobs:
         working-directory: src/actividades/EA3
         run: python main.py
 
+      - name: Publicar el resumen como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: resumen-ea3
+          path: src/actividades/EA3/salidas/resumen_ea3.txt
+          if-no-files-found: error
+
       - name: Publicar evidencias y gráficas como artefacto
         uses: actions/upload-artifact@v4
         with:

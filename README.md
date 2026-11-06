@@ -39,6 +39,7 @@ src/
       salidas/             Archivos .txt generados por el workflow
     EA3/
       main.py              Flujo completo de la actividad 3
+      HALLAZGOS.md         Documento de hallazgos para el equipo de fraude
       pregunta.py          Pregunta de negocio y datos del dataset
       configuracion.py     Semilla, fechas de la división temporal y otros valores del experimento
       componentes/         Cada paso del flujo (exploración, preprocesamiento, modelo...)
@@ -224,7 +225,11 @@ El workflow [`ea2.yml`](.github/workflows/ea2.yml) se activa solo con cada `push
 
 ## Actividad 3 — Random Forest para priorizar alertas de fraude
 
-> En construcción: fases 0 a 3 listas (pregunta, DataFrame, preprocesamiento, modelo y evaluación). Faltan el resumen `.txt` y el documento de hallazgos.
+**Flujo:** pregunta de negocio → Hugging Face → DataFrame → preprocesamiento → Random Forest → métricas y evaluación → resumen automático `.txt` → documento de hallazgos. GitHub Actions ejecuta todo con cada `push`.
+
+> 📊 **Documento de hallazgos (respuesta a la pregunta y recomendaciones):** [`src/actividades/EA3/HALLAZGOS.md`](src/actividades/EA3/HALLAZGOS.md)
+>
+> 📄 **Resumen automático de la ejecución:** [`src/actividades/EA3/salidas/resumen_ea3.txt`](src/actividades/EA3/salidas/resumen_ea3.txt). También se puede descargar como artefacto `resumen-ea3` desde la ejecución en GitHub Actions; las gráficas y demás evidencias van en el artefacto `evidencias-ea3`.
 
 ### Pregunta de negocio
 
@@ -257,6 +262,9 @@ Seguimos con [`pointe77/credit-card-transaction`](https://huggingface.co/dataset
 | 3. Curvas de precisión-recall y ROC | `src/actividades/EA3/graficas/03_curvas_pr_roc.png` |
 | 3. Fraudes y dinero detectados según la capacidad diaria | `src/actividades/EA3/graficas/03_capacidad_diaria.png` |
 | 3. Importancia de las variables | `src/actividades/EA3/graficas/03_importancia_variables.png` |
+| 4. **Resumen automático de la ejecución** | `src/actividades/EA3/salidas/resumen_ea3.txt` |
+| 4. **Documento de hallazgos** | [`src/actividades/EA3/HALLAZGOS.md`](src/actividades/EA3/HALLAZGOS.md) |
+| 5. Workflow, artefactos y commits del bot | [`.github/workflows/ea3.yml`](.github/workflows/ea3.yml) y pestaña **Actions** |
 
 ![Exploración inicial](src/actividades/EA3/graficas/00_exploracion.png)
 
@@ -345,7 +353,38 @@ El modelo se evalúa en **prueba (marzo a junio de 2020)**, con meses que no se 
 - **Porcentaje del dinero en fraude detectado.**
 - **Una tabla de capacidad:** si el equipo solo puede revisar 5, 10, 25, 50, 100 o 200 alertas al día, ¿cuántos fraudes y cuánto dinero detecta? Esa tabla es la que responde directamente la pregunta de negocio.
 
-Los resultados, con su interpretación, quedan en `03_evaluacion.txt`, y se explican en el documento de hallazgos.
+Los resultados, con su interpretación, quedan en `03_evaluacion.txt`, y se explican en el [documento de hallazgos](src/actividades/EA3/HALLAZGOS.md). En pocas palabras: con unas 14 alertas al día el modelo frena el 90 % de los fraudes y el 95 % del dinero en fraude, y 94 de cada 100 alertas son fraude de verdad.
+
+### Resumen automático y ejecución en GitHub
+
+`componentes/resumen.py` arma `salidas/resumen_ea3.txt` con lo que acaba de pasar en la ejecución, sin nada escrito a mano. Incluye:
+
+- La pregunta de negocio, el dataset y el preprocesamiento.
+- El tipo de aprendizaje, el algoritmo, las variables y los parámetros.
+- La configuración del experimento y las métricas.
+- La respuesta a la pregunta y la fecha de ejecución, con el enlace a la ejecución de GitHub Actions cuando corre allá.
+
+El workflow [`ea3.yml`](.github/workflows/ea3.yml) se activa solo con cada `push` a `main` que cambie archivos de la EA3. También se puede lanzar a mano, pero ese no es el único disparador. El workflow hace lo siguiente:
+
+1. Instala las dependencias.
+2. Ejecuta `python main.py`, que descarga el dataset, construye el DataFrame, lo preprocesa, entrena y evalúa el modelo y genera el resumen y las gráficas.
+3. Publica dos artefactos descargables: **`resumen-ea3`** con el resumen y **`evidencias-ea3`** con todos los `.txt` y las gráficas.
+4. Guarda una copia de los resultados en el repositorio con un commit de `github-actions[bot]`.
+
+**Cómo descargar el resumen:** pestaña **Actions** → "EA3 - Random Forest para priorizar alertas de fraude" → la última ejecución en verde → sección **Artifacts** → `resumen-ea3`.
+
+## Checklist de entrega (EA3)
+
+- [x] Pregunta de negocio clara, con quién la necesita y qué decisión apoya.
+- [x] Dataset exclusivo del grupo, con identificador y enlace documentados.
+- [x] DataFrame construido automáticamente desde Hugging Face.
+- [x] Preprocesamiento justificado, con evidencias antes y después.
+- [x] Un modelo supervisado (Random Forest) justificado y con su funcionamiento explicado en este README.
+- [x] Métricas y evaluación pertinentes, con parámetros documentados y justificados.
+- [x] Resumen automático en un archivo `.txt` generado por la ejecución.
+- [x] Documento de hallazgos que responde la pregunta de negocio y da recomendaciones.
+- [x] Ejecución automática en GitHub Actions, con el resumen disponible como artefacto.
+- [ ] Enlaces subidos a Canvas y acceso para el docente verificado.
 
 ![Matriz de confusión](src/actividades/EA3/graficas/03_matriz_confusion.png)
 
