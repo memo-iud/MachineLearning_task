@@ -1,0 +1,114 @@
+======================================================================
+RESUMEN EA3 - RANDOM FOREST PARA PRIORIZAR ALERTAS DE FRAUDE
+======================================================================
+
+PREGUNTA DE NEGOCIO
+----------------------------------------------------------------------
+¿Qué transacciones con tarjeta tienen mayor riesgo de ser fraude, para que el equipo de prevención de fraude decida cuáles bloquear o revisar primero, si solo puede revisar un número limitado de alertas al día?
+- Quién la necesita: El equipo de prevención de fraude del banco: los analistas que revisan las alertas y deciden si una transacción se bloquea o se deja pasar.
+- Qué decisión apoya: Qué transacciones mandar a revisión o bloquear, y desde qué nivel de riesgo hacerlo, según cuántas alertas alcanza a revisar el equipo en un día.
+
+EJECUCIÓN
+----------------------------------------------------------------------
+- Fecha de ejecución: 2026-11-06 18:38:20 (hora de Bogotá) / 2026-11-06 23:38:20 UTC
+- Entorno: Python 3.12.16, scikit-learn 1.9.1, pandas 2.2.3
+- Ejecutado por: GitHub Actions
+- Ejecución: https://github.com/memo-iud/MachineLearning_task/actions/runs/42312852362
+- Commit: 206a342
+
+DATASET
+----------------------------------------------------------------------
+- Identificador: pointe77/credit-card-transaction
+- Enlace: https://huggingface.co/datasets/pointe77/credit-card-transaction
+- Split: train
+- Tamaño: 1,296,675 filas y 24 columnas (195,973 nulos).
+- Contenido: transacciones de tarjeta de crédito simuladas, con fecha y hora, comercio, categoría, monto, datos y ubicación del cliente y del comercio, y la marca de fraude.
+
+PREPROCESAMIENTO
+----------------------------------------------------------------------
+- Después: 1,296,675 filas, 15 columnas, 0 nulos.
+  1. Selección de columnas: 12 columnas fuera (Unnamed: 0, first, last, street, trans_num, unix_time, zip, city, state, job, merchant, merch_zipcode); con ellas se van 195,973 nulos. Quedan 12 columnas renombradas al español.
+  2. Duplicados y tipos: 0 filas duplicadas eliminadas; 'fecha' y 'fecha_nacimiento' pasan de texto a fecha.
+  3. Variables del momento y del cliente: Nuevas: hora, dia_semana, edad, distancia_km.
+  4. Historial de cada tarjeta: Nuevas: veces_monto_habitual, compras_24h, monto_24h, horas_desde_anterior.
+  5. Quitar columnas ya transformadas: 5 columnas eliminadas (fecha_nacimiento, latitud, longitud, latitud_comerciante, longitud_comerciante).
+  6. Prueba de fuga de información: 1,024,843 filas comparadas; diferencia máxima = 0.00e+00 -> SIN fuga.
+  7. División temporal: entrenamiento < 2019-12-01 (783,790 filas); validación hasta 2020-03-01 (241,053); prueba desde 2020-03-01 (271,832).
+  8. Submuestreo de legítimas en entrenamiento: 783,790 -> 82,544 filas; fraude 0.590% -> 5.607% (semilla 42).
+  9. Prueba: ¿hace falta escalar?: coinciden en el 100.00 % de las transacciones; ROC-AUC 0.9722 sin escalar vs 0.9722 con escalado. Conclusión: no escalamos.
+- Detalle: salidas/01_preprocesamiento.txt
+
+MODELO
+----------------------------------------------------------------------
+- Tipo de aprendizaje: Supervisado (clasificación). Queremos predecir una variable que ya conocemos en los datos históricos: si la transacción fue fraude o no.
+- Algoritmo: Random Forest (sklearn.ensemble.RandomForestClassifier).
+- Variable objetivo: es_fraude (0 = legítima, 1 = fraude).
+- Predictoras numéricas (sin escalar): monto, hora, dia_semana, edad, distancia_km, poblacion_ciudad, veces_monto_habitual, compras_24h, monto_24h, horas_desde_anterior
+- Predictoras categóricas (one-hot): categoria, genero
+- Parámetros finales:
+    n_estimators = 100
+    max_depth = 20
+    min_samples_leaf = 1
+    class_weight = 'balanced_subsample'
+    max_features = 'sqrt'
+    criterion = 'gini'
+    bootstrap = True
+    random_state = 42
+- Cómo se eligieron: 30 combinaciones de max_depth [5, 10, 15, 20, None], min_samples_leaf [1, 10, 50], class_weight [None, 'balanced_subsample'], medidas con PR-AUC en validación; entre las casi empatadas, la de menor brecha entre entrenamiento y validación. Número de árboles por curva (10 a 400).
+- Umbral de alerta: 0.6796, el de mejor F1 en validación (F1 0.924).
+- Detalle: salidas/02_modelo.txt
+
+CONFIGURACIÓN DEL EXPERIMENTO
+----------------------------------------------------------------------
+- Semilla: 42
+- División temporal: entrenamiento < 2019-12-01; validación 2019-12-01 a 2020-03-01; prueba >= 2020-03-01.
+- Entrenamiento con todos los fraudes y el 10% de las legítimas.
+                                        desde       hasta   filas fraudes tasa_%
+    entrenamiento (completo)       2019-01-01  2019-11-30  783790    4628   0.59
+    entrenamiento (submuestreado)  2019-01-01  2019-11-30   82544    4628  5.607
+    validación                     2019-12-01  2020-02-28  241053    1271  0.527
+    prueba                         2020-03-01  2020-06-21  271832    1607  0.591
+
+MÉTRICAS EN PRUEBA
+----------------------------------------------------------------------
+                                exactitud  precision  recall      f1  pr_auc  roc_auc  alertas_por_dia  dinero_fraude_detectado_%
+bosque (umbral elegido)            0.9991     0.9427  0.9004  0.9211  0.9644   0.9989          13.5841                    95.2311
+bosque (umbral 0.5)                0.9986     0.8299  0.9502  0.8860     NaN      NaN          16.2832                    98.6223
+siempre legítima                   0.9941     0.0000  0.0000  0.0000  0.0059      NaN           0.0000                     0.0000
+regla: las compras más grandes     0.9927     0.3785  0.3615  0.3698  0.1891      NaN          13.5841                    65.5302
+
+Matriz de confusión (umbral elegido):
+                   sin alerta  con alerta
+    real legítima      270137          88
+    real fraude           160        1447
+- Detalle: salidas/03_evaluacion.txt
+
+RESPUESTA A LA PREGUNTA
+----------------------------------------------------------------------
+Las transacciones con más riesgo son las que el modelo pone arriba de la lista. Lo que más pesa para ubicarlas ahí es: monto, categoria, monto_24h, hora.
+- Con el umbral recomendado (0.680) el equipo revisaría unas 13.6 alertas al día y frenaría el 90.0 % de los fraudes, que son el 95.2 % del dinero en fraude. 94 de cada 100 alertas son fraude de verdad.
+- Según cuántas alertas pueda revisar el equipo al día:
+      5 alertas/día ->  33.9 % de los fraudes,  45.5 % del dinero,  99.8 % de las alertas son fraude (umbral 0.980)
+     10 alertas/día ->  71.6 % de los fraudes,  81.1 % del dinero,  99.1 % de las alertas son fraude (umbral 0.889)
+     25 alertas/día ->  96.8 % de los fraudes,  99.6 % del dinero,  62.2 % de las alertas son fraude (umbral 0.309)
+     50 alertas/día ->  98.4 % de los fraudes,  99.8 % del dinero,  35.5 % de las alertas son fraude (umbral 0.140)
+    100 alertas/día ->  99.4 % de los fraudes,  99.9 % del dinero,  19.0 % de las alertas son fraude (umbral 0.060)
+    200 alertas/día ->  99.7 % de los fraudes, 100.0 % del dinero,   9.9 % de las alertas son fraude (umbral 0.025)
+
+INTERPRETACIÓN
+----------------------------------------------------------------------
+- Decir siempre 'legítima' acierta el 99.41 % sin frenar un solo fraude. Por eso la exactitud no sirve para juzgar este modelo.
+- Con el umbral elegido en validación, el bosque genera 13.6 alertas al día y detecta el 90.0 % de los fraudes (1,447 de 1,607), que equivalen al 95.2 % del dinero en fraude.
+- De cada 100 alertas, 94 son fraude de verdad. El resto son falsas alarmas (88 en total).
+- Con las mismas alertas, la regla de revisar las compras más grandes detecta el 36.2 % de los fraudes (precisión 38 %), frente al 90.0 % del modelo. El modelo aporta más que una regla sencilla.
+- PR-AUC 0.964 (el azar daría 0.0059) y ROC-AUC 0.999.
+- Si el equipo solo puede revisar 50 alertas al día, detectaría el 98.4 % de los fraudes y el 99.8 % del dinero.
+- Las variables que más pesan son monto, categoria, monto_24h.
+- Los fraudes que se escapan tienen un monto mediano de $37.02, frente a $627.95 de los detectados: el modelo falla sobre todo en fraudes pequeños, que se parecen a compras normales.
+
+LIMITACIONES
+----------------------------------------------------------------------
+- El dataset es simulado; en un banco real el fraude es más variado y estas cifras seguramente serían más bajas.
+- El fraude cambia con el tiempo: el modelo habría que reentrenarlo y vigilarlo cada mes.
+- El umbral se eligió con F1; si el banco conoce el costo de cada error, debe ajustarlo con la tabla de capacidad.
+- Los fraudes pequeños, que se parecen a compras normales, son los que más se escapan.
