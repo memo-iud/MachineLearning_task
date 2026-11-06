@@ -9,8 +9,8 @@ El flujo completo va así:
         -> resumen automático .txt
         -> gráficas para el documento de hallazgos
 
-Por ahora tiene el componente 0 (pregunta + DataFrame) y el 1 (preprocesamiento).
-Los demás los vamos agregando por fases.
+Por ahora tiene los componentes 0 (pregunta + DataFrame), 1 (preprocesamiento),
+2 (modelo) y 3 (evaluación). El resumen .txt se agrega en la siguiente fase.
 
 Para correrlo en local, desde esta carpeta:
 
@@ -32,7 +32,14 @@ from clases_po import HFDatasetLoader  # noqa: E402
 
 import pregunta as pn  # noqa: E402
 from componentes import exploracion  # noqa: E402
-from componentes.preprocesamiento import PreprocesadorEA3  # noqa: E402
+from componentes.evaluacion import EvaluacionEA3  # noqa: E402
+from componentes.modelo import ModeloFraudeRF  # noqa: E402
+from componentes.preprocesamiento import (  # noqa: E402
+    CATEGORICAS,
+    NUMERICAS,
+    OBJETIVO,
+    PreprocesadorEA3,
+)
 
 SALIDAS = CARPETA_EA3 / "salidas"
 GRAFICAS = CARPETA_EA3 / "graficas"
@@ -54,8 +61,24 @@ def main() -> None:
     (SALIDAS / "01_preprocesamiento.txt").write_text(evidencia, encoding="utf-8")
     preprocesador.graficar(GRAFICAS / "01_historial_tarjeta.png")
 
-    # Próximas fases:
-    # 2-3. Random Forest, validación cruzada, métricas y gráficas
+    # Componente 2: Random Forest. Elegimos parámetros y umbral con la validación.
+    modelo = ModeloFraudeRF(NUMERICAS, CATEGORICAS, OBJETIVO)
+    modelo.ejecutar(preprocesador.train, preprocesador.validacion)
+    evidencia = modelo.generar_evidencia()
+    print(evidencia)
+    (SALIDAS / "02_modelo.txt").write_text(evidencia, encoding="utf-8")
+    modelo.graficar_ajuste(GRAFICAS / "02_eleccion_parametros.png")
+    modelo.graficar_arbol(GRAFICAS / "02_arbol_ejemplo.png")
+
+    # Componente 3: evaluación final con los meses de prueba.
+    evaluacion = EvaluacionEA3(modelo, preprocesador.validacion, preprocesador.prueba)
+    evaluacion.ejecutar()
+    evidencia = evaluacion.generar_evidencia()
+    print(evidencia)
+    (SALIDAS / "03_evaluacion.txt").write_text(evidencia, encoding="utf-8")
+    evaluacion.graficar(GRAFICAS)
+
+    # Próxima fase:
     # 4. resumen_ea3.txt
 
 

@@ -224,7 +224,7 @@ El workflow [`ea2.yml`](.github/workflows/ea2.yml) se activa solo con cada `push
 
 ## Actividad 3 — Random Forest para priorizar alertas de fraude
 
-> En construcción: fases 0 y 1 listas (pregunta, DataFrame y preprocesamiento).
+> En construcción: fases 0 a 3 listas (pregunta, DataFrame, preprocesamiento, modelo y evaluación). Faltan el resumen `.txt` y el documento de hallazgos.
 
 ### Pregunta de negocio
 
@@ -249,6 +249,14 @@ Seguimos con [`pointe77/credit-card-transaction`](https://huggingface.co/dataset
 | 0. Exploración: fraude por hora, montos y fraudes por mes | `src/actividades/EA3/graficas/00_exploracion.png` |
 | 1. Preprocesamiento: antes y después, operaciones, prueba de fuga y prueba de escalado | `src/actividades/EA3/salidas/01_preprocesamiento.txt` |
 | 1. Tasa de fraude según el historial de la tarjeta | `src/actividades/EA3/graficas/01_historial_tarjeta.png` |
+| 2. Búsqueda de parámetros, número de árboles y umbral | `src/actividades/EA3/salidas/02_modelo.txt` |
+| 2. Gráfica de la elección de parámetros | `src/actividades/EA3/graficas/02_eleccion_parametros.png` |
+| 2. Ejemplo de uno de los árboles del bosque | `src/actividades/EA3/graficas/02_arbol_ejemplo.png` |
+| 3. Evaluación en prueba: métricas, matriz, capacidad diaria, importancia y errores | `src/actividades/EA3/salidas/03_evaluacion.txt` |
+| 3. Matriz de confusión | `src/actividades/EA3/graficas/03_matriz_confusion.png` |
+| 3. Curvas de precisión-recall y ROC | `src/actividades/EA3/graficas/03_curvas_pr_roc.png` |
+| 3. Fraudes y dinero detectados según la capacidad diaria | `src/actividades/EA3/graficas/03_capacidad_diaria.png` |
+| 3. Importancia de las variables | `src/actividades/EA3/graficas/03_importancia_variables.png` |
 
 ![Exploración inicial](src/actividades/EA3/graficas/00_exploracion.png)
 
@@ -268,6 +276,78 @@ El código está en [`componentes/preprocesamiento.py`](src/actividades/EA3/comp
 | **Sin escalado** | Las numéricas entran tal cual; solo `categoria` y `genero` pasan por One-hot, aprendido con entrenamiento. | El Random Forest está hecho de árboles, y un árbol solo pregunta "¿esta variable es mayor o menor que tal valor?". Escalar no cambia el orden de los valores, así que no cambia nada. Lo comprobamos entrenando el mismo árbol con y sin escalado: dan las mismas predicciones. |
 
 ![Historial de la tarjeta](src/actividades/EA3/graficas/01_historial_tarjeta.png)
+
+### El modelo: Random Forest
+
+**Por qué un modelo supervisado.** En los datos históricos ya sabemos qué transacciones fueron fraude (`is_fraud`). Queremos que el modelo aprenda de esos ejemplos y le ponga una probabilidad de fraude a cada transacción nueva. Con esa probabilidad, el equipo puede ordenar las alertas de más a menos riesgo y revisar primero las de arriba. Si no tuviéramos esa etiqueta, tocaría usar un modelo no supervisado para buscar grupos, pero aquí sí la tenemos y es justo lo que queremos predecir.
+
+**Variables:**
+
+- **Objetivo:** `es_fraude` (0 = legítima, 1 = fraude).
+- **Predictoras:** `monto`, `hora`, `dia_semana`, `edad`, `distancia_km`, `poblacion_ciudad`, `categoria`, `genero` y las cuatro del historial de la tarjeta (`veces_monto_habitual`, `compras_24h`, `monto_24h` y `horas_desde_anterior`).
+- **Lo que no entra:** el número de tarjeta, porque solo sirve para agrupar el historial, y nada que revele la respuesta.
+
+**¿Por qué Random Forest y no la regresión logística de la EA2?** En la EA2 vimos que la logística suma efectos por separado, así que no capta combinaciones como "compra grande **y** de madrugada **y** muy distinta a lo que gasta esa tarjeta". Los árboles sí las capturan, porque van haciendo preguntas una detrás de otra.
+
+**Cómo funciona, paso a paso:**
+
+1. **Un árbol de decisión hace preguntas de sí o no.** Por ejemplo: "¿la compra es más de 10 veces lo que suele gastar esta tarjeta?". Para escoger cada pregunta, el árbol prueba muchas variables y valores de corte, y se queda con el que mejor separa fraudes de legítimas. Para medir qué tan bien separa usa el índice de Gini: 0 significa que el grupo quedó puro, todo fraude o todo legítima. Luego repite lo mismo en cada rama hasta llegar a las hojas, que dan la proporción de fraude.
+2. **Un solo árbol tiende a memorizar.** Si lo dejamos crecer mucho, aprende de memoria los casos de entrenamiento y falla con datos nuevos.
+3. **El bosque arma muchos árboles distintos.** Cada árbol aprende con una muestra al azar de las filas, con reemplazo (a esto se le llama *bootstrap*). Además, en cada pregunta solo puede escoger entre unas pocas variables sorteadas: la raíz cuadrada del total, `max_features="sqrt"`. Por eso cada árbol se fija en cosas diferentes.
+4. **Al final, los árboles votan.** La probabilidad de fraude es el promedio de lo que dice cada árbol. Como cada uno se equivoca de una forma distinta, al promediar los errores se compensan y el resultado es más estable que el de un solo árbol.
+5. **Con la probabilidad decidimos.** Si supera el umbral, se genera una alerta. El umbral lo escogemos nosotros según lo que necesite el equipo.
+
+En `02_arbol_ejemplo.png` se ven los primeros niveles de uno de los árboles del bosque: cada caja es una pregunta.
+
+**Parámetros principales y qué significan:**
+
+| Parámetro | Qué controla | Cómo lo elegimos |
+|---|---|---|
+| `n_estimators` | Cuántos árboles tiene el bosque. Con más árboles la votación es más estable, pero se demora más. | Curva de PR-AUC en validación con 10 a 400 árboles. Elegimos el número más pequeño que queda a menos de 0,002 del mejor. |
+| `max_depth` | Cuántas preguntas seguidas puede hacer cada árbol. Si es muy profundo memoriza; si es muy bajo se queda corto. | Probamos 5, 10, 15, 20 y sin límite. |
+| `min_samples_leaf` | El mínimo de transacciones en cada hoja. Más alto da reglas más generales. | Probamos 1, 10 y 50. |
+| `class_weight` | Si cada fraude pesa más al entrenar cada árbol. | Probamos sin peso y `"balanced_subsample"`. |
+| `max_features` | Cuántas variables al azar mira cada pregunta. | Valor por defecto (`"sqrt"`). |
+| `criterion`, `bootstrap` | Cómo se mide una buena pregunta (Gini) y si cada árbol usa una muestra al azar. | Valores por defecto (`"gini"`, `True`). |
+| `random_state` | La semilla, para que el resultado se pueda repetir. | 42 |
+
+**Cómo elegimos los parámetros sin hacer trampa:** probamos las 30 combinaciones de `max_depth`, `min_samples_leaf` y `class_weight`, todas con 100 árboles. Cada una se entrenó con enero a noviembre de 2019 y se midió en **validación**, de diciembre de 2019 a febrero de 2020, usando el PR-AUC. La prueba no se tocó. También miramos la **brecha** entre entrenamiento y validación: si es muy grande, el modelo está memorizando. Por eso, entre las combinaciones casi empatadas con la mejor (a menos de 0,005), nos quedamos con la de menor brecha. El umbral de alerta también se elige en validación: es el que da el mejor F1.
+
+**Ventajas:**
+
+- Capta combinaciones entre variables y relaciones que no son lineales.
+- No necesita escalar los datos y aguanta bien los valores extremos.
+- Es más estable que un solo árbol.
+- Nos dice qué variables pesan más.
+
+**Limitaciones:**
+
+- Es menos fácil de explicar que un solo árbol: no hay una única regla para cada alerta.
+- Con muchos árboles profundos ocupa memoria y tarda más.
+- Las probabilidades salen un poco infladas porque entrenamos con menos legítimas. Por eso el umbral se elige en validación, que tiene la proporción real.
+- Como cualquier modelo de fraude, hay que reentrenarlo seguido, porque los estafadores cambian de táctica.
+
+![Elección de parámetros](src/actividades/EA3/graficas/02_eleccion_parametros.png)
+
+### Evaluación
+
+El modelo se evalúa en **prueba (marzo a junio de 2020)**, con meses que no se usaron ni para entrenar ni para elegir parámetros ni el umbral. Comparamos contra dos líneas base:
+
+- **"Siempre legítima"**, para mostrar que la exactitud engaña.
+- **Una regla sin modelo:** revisar las compras más grandes, con la misma cantidad de alertas.
+
+**Métricas y por qué:**
+
+- **Recall:** cuántos fraudes alcanzamos a frenar. Un fraude que se escapa es dinero perdido.
+- **Precisión:** cuántas alertas son fraude de verdad. Cada falsa alarma le quita tiempo a un analista y molesta a un cliente.
+- **F1:** el equilibrio entre recall y precisión.
+- **PR-AUC:** qué tan bien ordena la lista de riesgo, sin depender del umbral.
+- **Porcentaje del dinero en fraude detectado.**
+- **Una tabla de capacidad:** si el equipo solo puede revisar 5, 10, 25, 50, 100 o 200 alertas al día, ¿cuántos fraudes y cuánto dinero detecta? Esa tabla es la que responde directamente la pregunta de negocio.
+
+Los resultados, con su interpretación, quedan en `03_evaluacion.txt`, y se explican en el documento de hallazgos.
+
+![Matriz de confusión](src/actividades/EA3/graficas/03_matriz_confusion.png)
 
 ## Ejecución local
 
