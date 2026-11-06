@@ -40,6 +40,7 @@ src/
     EA3/
       main.py              Flujo completo de la actividad 3
       pregunta.py          Pregunta de negocio y datos del dataset
+      configuracion.py     Semilla, fechas de la división temporal y otros valores del experimento
       componentes/         Cada paso del flujo (exploración, preprocesamiento, modelo...)
       salidas/             Archivos .txt generados por el workflow
       graficas/            Gráficas .png generadas por el workflow
@@ -223,7 +224,7 @@ El workflow [`ea2.yml`](.github/workflows/ea2.yml) se activa solo con cada `push
 
 ## Actividad 3 — Random Forest para priorizar alertas de fraude
 
-> En construcción: fase 0 lista (pregunta de negocio y DataFrame).
+> En construcción: fases 0 y 1 listas (pregunta, DataFrame y preprocesamiento).
 
 ### Pregunta de negocio
 
@@ -246,8 +247,27 @@ Seguimos con [`pointe77/credit-card-transaction`](https://huggingface.co/dataset
 |---|---|
 | 0. Pregunta, justificación del dataset y DataFrame | `src/actividades/EA3/salidas/00_dataframe.txt` |
 | 0. Exploración: fraude por hora, montos y fraudes por mes | `src/actividades/EA3/graficas/00_exploracion.png` |
+| 1. Preprocesamiento: antes y después, operaciones, prueba de fuga y prueba de escalado | `src/actividades/EA3/salidas/01_preprocesamiento.txt` |
+| 1. Tasa de fraude según el historial de la tarjeta | `src/actividades/EA3/graficas/01_historial_tarjeta.png` |
 
 ![Exploración inicial](src/actividades/EA3/graficas/00_exploracion.png)
+
+### Preprocesamiento
+
+El código está en [`componentes/preprocesamiento.py`](src/actividades/EA3/componentes/preprocesamiento.py). Estos son los pasos y por qué los hicimos:
+
+| Paso | Qué hicimos | Por qué |
+|---|---|---|
+| Selección de columnas | Quitamos 12 columnas: datos personales, identificadores, columnas repetidas y columnas con cientos de categorías. | No ayudan a predecir o ya están representadas por otra columna. El número de tarjeta lo usamos solo para agrupar el historial; no entra al modelo. |
+| Duplicados y tipos | Eliminamos filas repetidas y pasamos las fechas de texto a fecha. | Una fila repetida contaría doble, y las fechas hay que convertirlas para poder calcular con ellas. |
+| Variables del momento y del cliente | `hora`, `dia_semana`, `edad` y `distancia_km`. | En la exploración, la hora fue la señal más clara: a las 22 y 23 h el fraude se multiplica. |
+| **Historial de la tarjeta** | `veces_monto_habitual`, `compras_24h`, `monto_24h` y `horas_desde_anterior`. | Un fraude suele verse raro *para ese cliente*: una compra mucho más grande de lo normal o varias compras seguidas. En la EA2 dijimos que no tener el historial del cliente era la gran limitación; aquí la corregimos. |
+| Prueba de fuga | Recalculamos el historial borrando los meses de prueba y comparamos. | Si alguna variable mirara compras futuras, los valores cambiarían. La diferencia tiene que dar 0. |
+| División temporal | Entrenamiento: ene-nov 2019. Validación: dic 2019 a feb 2020. Prueba: mar a jun 2020. | En el banco el modelo aprende de lo que ya pasó y se usa con lo que viene. La validación sirve para elegir parámetros y umbral sin tocar la prueba. |
+| Submuestreo en entrenamiento | Dejamos todos los fraudes y el 10 % de las legítimas. | Hay unas 170 legítimas por cada fraude. Así el modelo ve el fraude con más peso y entrena mucho más rápido. Validación y prueba quedan con la proporción real, porque contra esa es que hay que medir. |
+| **Sin escalado** | Las numéricas entran tal cual; solo `categoria` y `genero` pasan por One-hot, aprendido con entrenamiento. | El Random Forest está hecho de árboles, y un árbol solo pregunta "¿esta variable es mayor o menor que tal valor?". Escalar no cambia el orden de los valores, así que no cambia nada. Lo comprobamos entrenando el mismo árbol con y sin escalado: dan las mismas predicciones. |
+
+![Historial de la tarjeta](src/actividades/EA3/graficas/01_historial_tarjeta.png)
 
 ## Ejecución local
 

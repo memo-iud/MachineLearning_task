@@ -9,8 +9,8 @@ El flujo completo va así:
         -> resumen automático .txt
         -> gráficas para el documento de hallazgos
 
-Por ahora tiene el componente 0 (pregunta + DataFrame). Los demás los vamos
-agregando por fases.
+Por ahora tiene el componente 0 (pregunta + DataFrame) y el 1 (preprocesamiento).
+Los demás los vamos agregando por fases.
 
 Para correrlo en local, desde esta carpeta:
 
@@ -32,6 +32,7 @@ from clases_po import HFDatasetLoader  # noqa: E402
 
 import pregunta as pn  # noqa: E402
 from componentes import exploracion  # noqa: E402
+from componentes.preprocesamiento import PreprocesadorEA3  # noqa: E402
 
 SALIDAS = CARPETA_EA3 / "salidas"
 GRAFICAS = CARPETA_EA3 / "graficas"
@@ -44,8 +45,16 @@ def main() -> None:
     print(f"[0] Dataset {pn.DATASET} (split={pn.SPLIT}) cargado: {df.shape}")
     exploracion.ejecutar(df, SALIDAS, GRAFICAS)
 
+    # Componente 1: preprocesamiento (historial de cada tarjeta y división temporal).
+    preprocesador = PreprocesadorEA3()
+    preprocesador.ejecutar(df)
+    del df  # ya no necesitamos el DataFrame crudo y así liberamos memoria
+    evidencia = preprocesador.generar_evidencia()
+    print(evidencia)
+    (SALIDAS / "01_preprocesamiento.txt").write_text(evidencia, encoding="utf-8")
+    preprocesador.graficar(GRAFICAS / "01_historial_tarjeta.png")
+
     # Próximas fases:
-    # 1. preprocesamiento (historial de cada tarjeta, división temporal)
     # 2-3. Random Forest, validación cruzada, métricas y gráficas
     # 4. resumen_ea3.txt
 
